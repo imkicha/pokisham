@@ -1,0 +1,408 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import API from '../../api/axios';
+import toast from 'react-hot-toast';
+import { FiEye, FiSend, FiFilter, FiSearch } from 'react-icons/fi';
+import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
+
+const SuperAdminOrders = () => {
+  const [orders, setOrders] = useState([]);
+  const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTenant, setFilterTenant] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [assignModal, setAssignModal] = useState({ show: false, orderId: null });
+  const [selectedTenant, setSelectedTenant] = useState('');
+
+  useEffect(() => {
+    document.title = 'Manage Orders - Super Admin - Pokisham';
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all orders
+      const { data: ordersData } = await API.get('/orders');
+      if (ordersData.success) {
+        setOrders(ordersData.orders);
+      }
+
+      // Fetch all tenants
+      const { data: tenantsData } = await API.get('/tenants');
+      if (tenantsData.success) {
+        setTenants(tenantsData.tenants);
+      }
+    } catch (error) {
+      toast.error('Failed to load orders');
+      console.error('Fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowAssignModal = (orderId) => {
+    setAssignModal({ show: true, orderId });
+    setSelectedTenant('');
+  };
+
+  const handleCloseAssignModal = () => {
+    setAssignModal({ show: false, orderId: null });
+    setSelectedTenant('');
+  };
+
+  const handleAssignToTenant = async () => {
+    if (!selectedTenant) {
+      toast.error('Please select a tenant');
+      return;
+    }
+
+    if (selectedTenant === 'all') {
+      // Assign to all approved tenants
+      const approvedTenants = tenants.filter(t => t.status === 'approved');
+
+      if (approvedTenants.length === 0) {
+        toast.error('No approved tenants available');
+        return;
+      }
+
+      if (!window.confirm(`This will notify all ${approvedTenants.length} approved tenants. Continue?`)) {
+        return;
+      }
+
+      try {
+        const promises = approvedTenants.map(tenant =>
+          API.post(`/orders/${assignModal.orderId}/assign-tenant`, {
+            tenantId: tenant._id,
+            notifyOnly: true  // Special flag for broadcasting
+          })
+        );
+
+        await Promise.all(promises);
+        toast.success(`Order broadcasted to ${approvedTenants.length} tenants`);
+        handleCloseAssignModal();
+        fetchData();
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to broadcast order');
+      }
+    } else {
+      // Assign to single tenant
+      try {
+        const { data } = await API.post(`/orders/${assignModal.orderId}/assign-tenant`, {
+          tenantId: selectedTenant
+        });
+
+        if (data.success) {
+          toast.success(data.message || 'Order assigned successfully to tenant');
+          handleCloseAssignModal();
+          fetchData();
+        }
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to assign order');
+      }
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Accepted':
+        return 'bg-blue-100 text-blue-800';
+      case 'Processing':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Packed':
+        return 'bg-cyan-100 text-cyan-800';
+      case 'Shipped':
+        return 'bg-purple-100 text-purple-800';
+      case 'Out for Delivery':
+        return 'bg-violet-100 text-violet-800';
+      case 'Delivered':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTenantName = (tenantId) => {
+    const tenant = tenants.find(t => t._id === tenantId);
+    return tenant ? tenant.businessName : 'Platform';
+  };
+
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = filterStatus === 'all' || order.orderStatus === filterStatus;
+    const matchesTenant = filterTenant === 'all' ||
+                         (filterTenant === 'multi' && order.isMultiTenant) ||
+                         (filterTenant === 'platform' && !order.tenantId) ||
+                         (order.tenantId && order.tenantId.toString() === filterTenant);
+
+    const matchesSearch = order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return matchesStatus && matchesTenant && matchesSearch;
+  });
+
+  const stats = {
+    total: orders.length,
+    pending: orders.filter(o => o.orderStatus === 'Pending').length,
+    multiTenant: orders.filter(o => o.isMultiTenant).length,
+    routed: orders.filter(o => o.routedToTenant).length,
+    totalRevenue: orders.reduce((sum, o) => sum + o.totalPrice, 0),
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <DashboardBreadcrumb
+        dashboardType="superadmin"
+        items={[{ label: 'Orders' }]}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            All Orders
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            View and manage all orders across the platform
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-xs text-gray-600">Total Orders</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+            <p className="text-xs text-gray-600">Pending</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-2xl font-bold text-purple-600">{stats.multiTenant}</p>
+            <p className="text-xs text-gray-600">Multi-Tenant</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-2xl font-bold text-green-600">{stats.routed}</p>
+            <p className="text-xs text-gray-600">Routed</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-lg font-bold text-blue-600">₹{stats.totalRevenue.toLocaleString('en-IN')}</p>
+            <p className="text-xs text-gray-600">Total Revenue</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by order ID or customer name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <FiFilter className="w-5 h-5 text-gray-500" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Processing">Processing</option>
+                <option value="Packed">Packed</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Out for Delivery">Out for Delivery</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            {/* Tenant Filter */}
+            <select
+              value={filterTenant}
+              onChange={(e) => setFilterTenant(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="all">All Tenants</option>
+              <option value="platform">Platform Only</option>
+              <option value="multi">Multi-Tenant</option>
+              {tenants.map(tenant => (
+                <option key={tenant._id} value={tenant._id}>
+                  {tenant.businessName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Orders Table */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Customer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                    Tenant
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                      No orders found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <tr key={order._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        #{order._id.slice(-6).toUpperCase()}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-500 hidden md:table-cell">
+                        {order.user?.name || 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        ₹{order.totalPrice.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                        {order.isMultiTenant ? (
+                          <span className="text-purple-600 font-medium">Multi-Tenant</span>
+                        ) : (
+                          getTenantName(order.tenantId)
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.orderStatus)}`}>
+                          {order.orderStatus}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
+                          <Link
+                            to={`/orders/${order._id}`}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View Details"
+                          >
+                            <FiEye className="w-5 h-5" />
+                          </Link>
+                          {!order.routedToTenant && (
+                            <button
+                              onClick={() => handleShowAssignModal(order._id)}
+                              className="text-green-600 hover:text-green-800"
+                              title="Assign to Tenant"
+                            >
+                              <FiSend className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Assign to Tenant Modal */}
+        {assignModal.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Assign Order to Tenant
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Select a tenant to assign this order to. The tenant will be notified and can process the order.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Tenant
+                </label>
+                <select
+                  value={selectedTenant}
+                  onChange={(e) => setSelectedTenant(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">-- Choose a Tenant --</option>
+                  <option value="all" className="font-semibold text-primary-600">
+                    📢 Assign to All Tenants
+                  </option>
+                  {tenants
+                    .filter(tenant => tenant.status === 'approved')
+                    .map(tenant => (
+                      <option key={tenant._id} value={tenant._id}>
+                        {tenant.businessName} - {tenant.ownerName}
+                      </option>
+                    ))}
+                </select>
+                {selectedTenant === 'all' && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ This will notify all approved tenants. First tenant to accept will process the order.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCloseAssignModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignToTenant}
+                  disabled={!selectedTenant}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Assign Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      </div>
+    </>
+  );
+};
+
+export default SuperAdminOrders;

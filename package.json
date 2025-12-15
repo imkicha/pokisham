@@ -1,0 +1,29 @@
+{
+  "name": "pokisham",
+  "version": "1.0.0",
+  "description": "E-commerce platform for South Indian gifts and collectibles",
+  "main": "index.js",
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-server": "cd server && npm install",
+    "install-client": "cd client && npm install",
+    "install-all": "npm run install-server && npm run install-client",
+    "build": "cd client && npm run build",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
+  },
+  "keywords": [
+    "ecommerce",
+    "south-indian",
+    "gifts",
+    "pottery",
+    "kolu",
+    "frames"
+  ],
+  "author": "Pokisham Team",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
