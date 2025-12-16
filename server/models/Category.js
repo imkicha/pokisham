@@ -31,12 +31,15 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
-// Generate slug before saving
-categorySchema.pre('save', function (next) {
+// ✅ SAFE slug generation (no next)
+categorySchema.pre('save', async function () {
   if (this.isModified('name')) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
+    this.slug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '');
   }
-  next();
 });
 
 module.exports = mongoose.model('Category', categorySchema);

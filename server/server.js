@@ -23,10 +23,15 @@ app.use(cookieParser());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: [
+      "http://136.185.19.6",
+      "http://136.185.19.6:3000",
+      "http://localhost:3000"
+    ],
     credentials: true,
   })
 );
+
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

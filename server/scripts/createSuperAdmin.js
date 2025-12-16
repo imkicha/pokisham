@@ -1,54 +1,62 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
-const createSuperAdmin = async () => {
+const ADMINS = [
+  {
+    name: 'Super Admin',
+    email: 'superadmin@pokisham.com',
+    password: 'admin123',
+    phone: '9999999999',
+    role: 'superadmin',
+    isVerified: true,
+  },
+  {
+    name: 'Admin',
+    email: 'admin@pokisham.com',
+    password: 'admin123',
+    phone: '8888888888',
+    role: 'admin',
+    isVerified: true,
+  },
+];
+
+const createAdmins = async () => {
   try {
-    // Connect to database
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('Connected to MongoDB');
+    console.log('✓ Connected to MongoDB\n');
 
-    // Check if super admin already exists
-    const existingSuperAdmin = await User.findOne({ email: 'superadmin@pokisham.com' });
+    for (const adminData of ADMINS) {
+      const existingUser = await User.findOne({ email: adminData.email });
 
-    if (existingSuperAdmin) {
-      console.log('Super Admin already exists!');
-      console.log('Email:', existingSuperAdmin.email);
-      console.log('Role:', existingSuperAdmin.role);
+      if (existingUser) {
+        existingUser.role = adminData.role;
+        existingUser.isVerified = true;
+        await existingUser.save();
 
-      // Ensure role & verification
-      existingSuperAdmin.role = 'superadmin';
-      existingSuperAdmin.isVerified = true;
-      await existingSuperAdmin.save();
+        console.log(`✓ Updated existing ${adminData.role}`);
+        console.log(`  Email: ${existingUser.email}`);
+      } else {
+        const user = await User.create(adminData);
 
-      console.log('✓ Existing user updated to verified Super Admin role');
-    } else {
-      // Create new super admin
-      const superAdmin = await User.create({
-        name: 'Super Admin',
-        email: 'superadmin@pokisham.com',
-        password: 'admin123', // Will be hashed automatically
-        phone: '9999999999',
-        role: 'superadmin',
-        isVerified: true       // <-- IMPORTANT!
-      });
+        console.log(`✓ Created ${adminData.role}`);
+        console.log(`  Email: ${user.email}`);
+        console.log(`  Password: ${adminData.password}`);
+      }
 
-      console.log('✓ Super Admin created successfully!');
-      console.log('Email:', superAdmin.email);
-      console.log('Password: admin123');
-      console.log('Role:', superAdmin.role);
+      console.log('-----------------------------');
     }
 
-    console.log('\n--- Login Credentials ---');
-    console.log('Email: superadmin@pokisham.com');
-    console.log('Password: admin123');
-    console.log('------------------------\n');
+    console.log('\n--- LOGIN CREDENTIALS ---');
+    console.log('Super Admin → superadmin@pokisham.com / admin123');
+    console.log('Admin       → admin@pokisham.com / admin123');
+    console.log('-------------------------\n');
 
     process.exit(0);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('❌ Error:', error.message);
     process.exit(1);
   }
 };
 
-createSuperAdmin();
+createAdmins();
