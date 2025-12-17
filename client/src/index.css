@@ -107,7 +107,7 @@
 
   .animate-letter {
     opacity: 0;
-    animation: letterAppear 0.5s ease-out forwards, floatLetter 3s ease-in-out 30s infinite;
+    animation: letterAppear 0.5s ease-out forwards;
     display: inline-block;
     animation-fill-mode: forwards;
   }

@@ -1,120 +1,191 @@
-# Pokisham - E-Commerce Platform
+# 🎁 Pokisham - E-Commerce Platform
 
-A modern, mobile-responsive e-commerce web application for selling Gifts, Custom Frames, Pottery Items, and Kolu Bommai collections with a beautiful South-Indian inspired design theme.
+A modern, secure, and mobile-responsive e-commerce web application for selling handcrafted Gifts, Custom Frames, Pottery Items, and Kolu Bommai collections with a beautiful South-Indian inspired design theme.
+
+[![Security: Helmet](https://img.shields.io/badge/Security-Helmet-green)](https://helmetjs.github.io/)
+[![Authentication: JWT](https://img.shields.io/badge/Auth-JWT-blue)](https://jwt.io/)
+[![Database: MongoDB](https://img.shields.io/badge/Database-MongoDB-green)](https://www.mongodb.com/)
+[![Frontend: React](https://img.shields.io/badge/Frontend-React-blue)](https://reactjs.org/)
+
+![Pokisham Banner](client/public/treasure-open-removebg-preview.png)
 
 ## Features
 
 ### User Features
-- Browse products by categories (Gifts, Custom Frames, Pottery, Kolu Bommai)
-- Product search and filtering
-- Add products to cart and wishlist
-- User authentication with OTP verification
-- Multiple address management
-- Secure checkout with Razorpay payment integration
-- Order tracking with real-time status updates
-- Product reviews and ratings
-- Gift wrapping option
-- Mobile-responsive design
+- 🛍️ **Shopping Experience**
+  - Browse products by categories (Gifts, Custom Frames, Pottery, Kolu Bommai)
+  - Advanced search and filtering
+  - Product details with image galleries
+  - Add products to cart and wishlist
+  - Gift wrapping option
+
+- 🔐 **Authentication & Security**
+  - User authentication with OTP verification
+  - Secure cookie-based session management
+  - JWT token authentication
+  - Password reset functionality
+  - Multiple address management
+
+- 💳 **Payment & Orders**
+  - Secure checkout with Razorpay integration
+  - Order tracking with real-time status updates
+  - Order history and invoice download
+  - Multiple payment methods
+
+- 🎁 **Treasure Hunt Feature**
+  - Interactive treasure chest appears every 3 minutes
+  - Special offers and discounts
+  - Engaging animations and effects
+  - Mobile-responsive design
 
 ### Admin Features
-- Dashboard with analytics (orders, revenue, popular products)
-- Product management (Add/Edit/Delete)
-- Image upload with Cloudinary integration
-- Order management with status updates
-- Category management
-- Customer view
-- Low stock alerts
+- 📊 **Dashboard Analytics**
+  - Real-time sales statistics
+  - Revenue tracking
+  - Popular products analysis
+  - Customer insights
+
+- 🏪 **Product Management**
+  - Add/Edit/Delete products
+  - Image upload with Cloudinary integration
+  - Inventory management
+  - Category management
+  - Low stock alerts
+
+- 📦 **Order Management**
+  - View all orders
+  - Update order status
+  - Track shipments
+  - Manage returns/cancellations
+
+- 👥 **User Management**
+  - View all users
+  - Role management (Admin, SuperAdmin, Tenant)
+  - Customer analytics
+
+### 🔒 Security Features
+- ✅ Secure cookie-based authentication (HttpOnly, Secure, SameSite)
+- ✅ Rate limiting on sensitive endpoints (prevents brute force attacks)
+- ✅ XSS protection with DOMPurify
+- ✅ NoSQL injection prevention
+- ✅ CORS configuration
+- ✅ Comprehensive security headers (Helmet.js)
+- ✅ Input sanitization and validation
+- ✅ Suspicious activity logging
+- ✅ CSRF protection
+- ✅ Request size limits
+- ✅ HTTP Parameter Pollution prevention
+
+**[📖 Read Full Security Documentation](SECURITY.md)**
 
 ## Technology Stack
 
 ### Backend
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **JWT** - Authentication
+- **MongoDB** - NoSQL database
+- **Mongoose** - Object Data Modeling (ODM)
+- **JWT** - Token-based authentication
 - **Bcrypt** - Password hashing
-- **Cloudinary** - Image storage
-- **Razorpay** - Payment gateway
-- **Nodemailer** - Email service
+- **Cloudinary** - Cloud-based image storage
+- **Razorpay** - Payment gateway integration
+- **Nodemailer** - Email service (OTP, notifications)
+- **Helmet** - Security headers middleware
+- **Express Rate Limit** - Rate limiting middleware
+- **Express Mongo Sanitize** - NoSQL injection prevention
+- **HPP** - HTTP Parameter Pollution prevention
+- **Validator** - Input validation library
 
 ### Frontend
-- **React.js** - UI library
-- **TailwindCSS** - CSS framework
-- **React Router** - Routing
-- **Axios** - HTTP client
-- **React Hot Toast** - Notifications
+- **React 19.2.0** - Modern UI library
+- **TailwindCSS** - Utility-first CSS framework
+- **React Router** - Client-side routing
+- **Axios** - Promise-based HTTP client
+- **React Hot Toast** - Toast notifications
 - **React Icons** - Icon library
+- **js-cookie** - Cookie management
+- **DOMPurify** - XSS protection library
 
 ## Project Structure
 
 ```
 Pokisham/
-├── server/                 # Backend
-│   ├── config/            # Configuration files
-│   │   ├── database.js
-│   │   └── cloudinary.js
-│   ├── controllers/       # Route controllers
-│   │   ├── authController.js
+├── client/                      # Frontend React application
+│   ├── public/
+│   │   ├── favicon.ico
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── apple-touch-icon.png
+│   │   ├── treasure-closed-removebg-preview.png
+│   │   ├── treasure-open-removebg-preview.png
+│   │   └── treasure-offer.png
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── axios.js         # Axios configuration with interceptors
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   └── Treasure.js  # Treasure hunt feature
+│   │   │   ├── layout/
+│   │   │   ├── product/
+│   │   │   ├── cart/
+│   │   │   └── admin/
+│   │   ├── context/
+│   │   │   ├── AuthContext.js   # Authentication context
+│   │   │   └── CartContext.js   # Shopping cart context
+│   │   ├── pages/
+│   │   │   ├── WelcomePage.js   # Welcome screen with treasure
+│   │   │   ├── HomePage.js      # Main home page
+│   │   │   ├── user/
+│   │   │   ├── auth/
+│   │   │   └── admin/
+│   │   ├── utils/
+│   │   │   └── security.js      # Security utility functions
+│   │   ├── App.js
+│   │   ├── index.js
+│   │   └── index.css
+│   ├── .env.example
+│   ├── tailwind.config.js
+│   └── package.json
+│
+├── server/                      # Backend Node.js application
+│   ├── config/
+│   │   ├── database.js          # MongoDB configuration
+│   │   └── cloudinary.js        # Cloudinary configuration
+│   ├── controllers/
+│   │   ├── authController.js    # Authentication logic
 │   │   ├── productController.js
 │   │   ├── categoryController.js
 │   │   ├── cartController.js
 │   │   ├── wishlistController.js
 │   │   └── orderController.js
-│   ├── models/            # Database models
-│   │   ├── User.js
+│   ├── models/
+│   │   ├── User.js              # User schema
 │   │   ├── Product.js
 │   │   ├── Category.js
 │   │   ├── Cart.js
 │   │   ├── Wishlist.js
 │   │   └── Order.js
-│   ├── routes/            # API routes
-│   │   ├── authRoutes.js
+│   ├── routes/
+│   │   ├── authRoutes.js        # Auth endpoints with rate limiting
 │   │   ├── productRoutes.js
 │   │   ├── categoryRoutes.js
 │   │   ├── cartRoutes.js
 │   │   ├── wishlistRoutes.js
 │   │   └── orderRoutes.js
-│   ├── middleware/        # Middleware
-│   │   ├── auth.js
-│   │   └── error.js
-│   ├── utils/             # Utility functions
+│   ├── middleware/
+│   │   ├── auth.js              # JWT authentication middleware
+│   │   ├── error.js             # Error handling middleware
+│   │   └── security.js          # Security middleware (NEW!)
+│   ├── utils/
 │   │   ├── generateToken.js
+│   │   ├── sendEmail.js
 │   │   └── otp.js
-│   ├── .env.example       # Environment variables example
+│   ├── .env.example             # Environment variables template
 │   ├── package.json
-│   └── server.js          # Entry point
+│   └── server.js                # Express app entry point
 │
-└── client/                # Frontend
-    ├── public/
-    ├── src/
-    │   ├── api/           # API configuration
-    │   │   └── axios.js
-    │   ├── components/    # React components
-    │   │   ├── layout/
-    │   │   │   ├── Header.js
-    │   │   │   └── Footer.js
-    │   │   ├── product/
-    │   │   │   └── ProductCard.js
-    │   │   ├── common/
-    │   │   ├── cart/
-    │   │   └── admin/
-    │   ├── context/       # React Context
-    │   │   ├── AuthContext.js
-    │   │   └── CartContext.js
-    │   ├── pages/         # Page components
-    │   │   ├── user/
-    │   │   │   └── HomePage.js
-    │   │   ├── auth/
-    │   │   └── admin/
-    │   ├── utils/         # Utility functions
-    │   ├── App.js
-    │   ├── index.js
-    │   └── index.css
-    ├── .env.example
-    ├── tailwind.config.js
-    ├── postcss.config.js
-    └── package.json
+├── SECURITY.md                  # Security documentation
+└── README.md                    # This file
 ```
 
 ## Installation & Setup
@@ -323,57 +394,213 @@ The app will run on `http://localhost:3000`
 - Cultural motifs in decorative elements
 - Festive themes (Kolu season highlights)
 
-## Features to Implement (Future)
+## 🎁 Treasure Hunt Feature
 
-1. **Additional Pages**:
-   - Login, Register, OTP Verification pages
-   - Product listing and detail pages
-   - Cart and checkout pages
-   - Order tracking pages
-   - User profile and order history
-   - Admin dashboard and management pages
+An engaging gamification feature that rewards users with special offers:
 
-2. **Advanced Features**:
-   - Custom frame builder (upload photo + choose frame)
-   - AI-based gift suggestions
-   - Seasonal combos and offers
-   - Advanced analytics with charts
-   - Multi-warehouse inventory
-   - Customer reviews with images
-   - Coupon and discount system
+### How It Works
+1. **Automatic Appearance**: Treasure chest appears 3 minutes after login
+2. **Movement**: Chest moves to random positions every 10 seconds
+3. **Interactive**: Click to open and reveal special offers
+4. **Reward**: Redirects to products page with discount applied
+5. **Recurring**: Reappears every 3 minutes
 
-3. **Performance Optimizations**:
-   - Image lazy loading
-   - Code splitting
-   - CDN integration
-   - Caching strategies
+### Technical Implementation
+- **Component**: `client/src/components/common/Treasure.js`
+- **Images**:
+  - `treasure-closed-removebg-preview.png` - Closed state
+  - `treasure-open-removebg-preview.png` - Opened state
+  - `treasure-offer.png` - Offer display
+- **Animations**: Bounce, pulse, confetti, sparkles
+- **Responsive**: Optimized for mobile and desktop
+- **State Management**: Uses sessionStorage and localStorage
 
-4. **Testing**:
-   - Unit tests
-   - Integration tests
-   - E2E tests
-   - Performance tests
+### Customization
+```javascript
+// Change appearance interval (currently 3 minutes)
+const threeMinutes = 3 * 60 * 1000;
 
-## Deployment
+// Change movement interval (currently 10 seconds)
+setInterval(() => setRandomPosition(), 10000);
+```
 
-### Backend
-- Deploy to Heroku, Render, or Railway
-- Set environment variables
-- Connect to MongoDB Atlas
+## 🧪 Testing
 
-### Frontend
-- Deploy to Vercel or Netlify
-- Update API URL
-- Set Razorpay key
+### Backend Testing
+```bash
+cd server
+npm test
+```
 
-## Contributing
+### Frontend Testing
+```bash
+cd client
+npm test
+```
 
-This is a private project. For any queries, contact the development team.
+### Security Testing
+```bash
+# Run npm audit
+npm audit
 
-## License
+# Test rate limiting
+# Try logging in with wrong credentials 6+ times
 
-Proprietary - All rights reserved
+# Test XSS protection
+# Try submitting forms with <script> tags
+```
 
-## Support
+## 🐛 Troubleshooting
 
-For support, email: hello@pokisham.com
+### MongoDB Connection Issues
+- Ensure MongoDB is running: `mongod`
+- Check connection string in `.env`
+- For MongoDB Atlas, check IP whitelist
+
+### CORS Errors
+- Update `ALLOWED_ORIGINS` in server `.env`
+- Check CORS configuration in `server/server.js`
+
+### Rate Limiting
+- Wait for rate limit window to expire
+- Adjust limits in `server/middleware/security.js`
+
+### Image Upload Fails
+- Verify Cloudinary credentials
+- Check file size (max 10MB)
+- Ensure file type is allowed
+
+## 📚 API Rate Limits
+
+| Endpoint Type | Requests | Time Window |
+|--------------|----------|-------------|
+| Login/Register | 5 | 15 minutes |
+| OTP Requests | 3 | 10 minutes |
+| Password Reset | 3 | 1 hour |
+| General API | 100 | 15 minutes |
+| Brute Force Protection | 3 failed attempts | 5 minutes |
+
+## 🚢 Deployment
+
+### Production Checklist
+Before deploying to production, ensure you complete these critical steps:
+
+- [ ] Change `JWT_SECRET` to a strong random string (32+ characters)
+- [ ] Update `MONGODB_URI` to production database (MongoDB Atlas)
+- [ ] Set `NODE_ENV=production`
+- [ ] Enable HTTPS/SSL certificates
+- [ ] Set `COOKIE_SECURE=true`
+- [ ] Set `ENABLE_HSTS=true`
+- [ ] Update `ALLOWED_ORIGINS` to production domains
+- [ ] Configure MongoDB authentication and encryption
+- [ ] Set up automated backups
+- [ ] Run security audit: `npm audit`
+- [ ] Test all payment flows in production mode
+- [ ] Configure monitoring and logging
+- [ ] Set up error tracking (Sentry, etc.)
+
+### Backend Deployment (Railway/Render/Heroku)
+
+**Railway (Recommended)**
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login and initialize
+railway login
+railway init
+
+# Add environment variables via Railway dashboard
+railway variables set JWT_SECRET=your_production_secret
+railway variables set MONGODB_URI=your_atlas_uri
+# ... add all other variables
+
+# Deploy
+railway up
+```
+
+**Environment Variables to Set:**
+- All variables from `.env.example`
+- Ensure production URLs and secrets
+
+### Frontend Deployment (Vercel/Netlify)
+
+**Vercel (Recommended)**
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy from client directory
+cd client
+vercel --prod
+
+# Set environment variables
+vercel env add REACT_APP_API_URL production
+vercel env add REACT_APP_RAZORPAY_KEY_ID production
+```
+
+**Build Settings:**
+- Build Command: `npm run build`
+- Output Directory: `build`
+- Node Version: 20.x
+
+### Post-Deployment Verification
+
+1. **Test Authentication Flow**
+   - Register → Verify OTP → Login → Logout
+
+2. **Test Payment Integration**
+   - Add to cart → Checkout → Payment
+
+3. **Verify Security Headers**
+   ```bash
+   curl -I https://your-domain.com
+   # Check for security headers
+   ```
+
+4. **Monitor Performance**
+   - Set up monitoring (New Relic, Datadog)
+   - Configure error tracking (Sentry)
+   - Enable logging aggregation
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Coding Standards
+- Follow ESLint configuration
+- Write meaningful commit messages
+- Add comments for complex logic
+- Test thoroughly before submitting PR
+- Update documentation for new features
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 📞 Support & Contact
+
+- 📧 **Email**: hello@pokisham.com
+- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/pokisham/issues)
+- 📚 **Documentation**: [SECURITY.md](SECURITY.md)
+- 💬 **Discussions**: For questions and community support
+
+## 🙏 Acknowledgments
+
+- React team for excellent documentation
+- Express.js community
+- MongoDB team
+- All open-source contributors
+- Security researchers and the OWASP community
+
+---
+
+**Made with ❤️ for handcrafted treasures**
+
+*Pokisham - Discover Unique Handcrafted Gifts*

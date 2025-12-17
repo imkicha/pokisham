@@ -14,13 +14,22 @@ const {
   resetPassword,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
+const {
+  authLimiter,
+  otpLimiter,
+  passwordResetLimiter,
+  bruteForceProtection,
+} = require('../middleware/security');
 
-router.post('/register', register);
-router.post('/verify-otp', verifyOTP);
-router.post('/resend-otp', resendOTP);
-router.post('/login', login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+// Public routes with rate limiting
+router.post('/register', authLimiter, register);
+router.post('/verify-otp', otpLimiter, verifyOTP);
+router.post('/resend-otp', otpLimiter, resendOTP);
+router.post('/login', authLimiter, bruteForceProtection, login);
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.post('/reset-password', passwordResetLimiter, resetPassword);
+
+// Protected routes
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.post('/address', protect, addAddress);

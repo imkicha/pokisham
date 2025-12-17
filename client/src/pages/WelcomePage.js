@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiShoppingBag, FiHeart, FiTruck, FiGift, FiStar, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,6 +9,7 @@ const WelcomePage = () => {
   const [showContent, setShowContent] = useState(false);
   const [letterIndex, setLetterIndex] = useState(0);
   const [treasureOpen, setTreasureOpen] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const logoText = 'POKISHAM';
 
   useEffect(() => {
@@ -27,11 +28,11 @@ const WelcomePage = () => {
     // Show treasure chest first
     setTimeout(() => setShowContent(true), 500);
 
-    // Open treasure after 1.5 seconds
-    setTimeout(() => setTreasureOpen(true), 1500);
+  }, [navigate]);
 
-    // Start revealing letters after treasure opens
-    setTimeout(() => {
+  // Handle treasure opening - start letter reveal animation
+  useEffect(() => {
+    if (treasureOpen) {
       const interval = setInterval(() => {
         setLetterIndex((prev) => {
           if (prev < logoText.length) {
@@ -41,9 +42,10 @@ const WelcomePage = () => {
           return prev;
         });
       }, 150);
-    }, 2000);
 
-  }, [navigate, logoText.length]);
+      return () => clearInterval(interval);
+    }
+  }, [treasureOpen, logoText.length]);
 
   const handleEnter = () => {
     localStorage.setItem('hasSeenWelcome', 'true');
@@ -93,18 +95,26 @@ const WelcomePage = () => {
 
           {/* Treasure Chest Animation */}
           <div className="mb-8 relative">
-            {/* Treasure Chest */}
-            {showContent && !treasureOpen && (
-              <div className="inline-block animate-bounce mb-8">
+            {/* Treasure Chest - Clickable (Closed) */}
+            {showContent && !isOpening && !treasureOpen && (
+              <div
+                className="inline-block animate-bounce mb-8 cursor-pointer group"
+                onClick={() => {
+                  setIsOpening(true);
+                  setTimeout(() => {
+                    setTreasureOpen(true);
+                    setIsOpening(false);
+                  }, 800);
+                }}
+              >
                 <div className="relative">
-                  {/* Glow effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 rounded-full blur-3xl opacity-75 animate-pulse"></div>
-
-                  {/* Chest */}
-                  <div className="relative bg-gradient-to-br from-yellow-600 to-yellow-800 w-40 h-40 md:w-48 md:h-48 rounded-2xl shadow-2xl mx-auto">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FiGift className="w-20 h-20 md:w-24 md:h-24 text-white animate-pulse" />
-                    </div>
+                  {/* Closed Chest */}
+                  <div className="relative w-40 h-40 md:w-48 md:h-48 mx-auto transform group-hover:scale-110 transition-transform">
+                    <img
+                      src="/treasure-closed-removebg-preview.png"
+                      alt="Pokisham Treasure Chest"
+                      className="w-full h-full object-contain drop-shadow-2xl animate-pulse"
+                    />
 
                     {/* Sparkles */}
                     {[...Array(12)].map((_, i) => (
@@ -119,6 +129,24 @@ const WelcomePage = () => {
                       />
                     ))}
                   </div>
+
+                  {/* Click hint */}
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to open! 🎁
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Opening Transition */}
+            {isOpening && (
+              <div className="inline-block mb-8 animate-scale-in">
+                <div className="relative w-40 h-40 md:w-48 md:h-48 mx-auto">
+                  <img
+                    src="/treasure-open-removebg-preview.png"
+                    alt="Pokisham Treasure Opening"
+                    className="w-full h-full object-contain drop-shadow-2xl animate-pulse"
+                  />
                 </div>
               </div>
             )}
@@ -126,24 +154,35 @@ const WelcomePage = () => {
             {/* Opening Animation & Logo Reveal */}
             {treasureOpen && (
               <>
-                {/* Confetti burst */}
-                <div className="absolute inset-0 overflow-visible pointer-events-none">
-                  {[...Array(30)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute animate-confetti"
-                      style={{
-                        left: '50%',
-                        top: '20%',
-                        width: `${Math.random() * 10 + 5}px`,
-                        height: `${Math.random() * 10 + 5}px`,
-                        backgroundColor: ['#ffd700', '#ffa500', '#ff6347', '#ff69b4', '#87ceeb'][Math.floor(Math.random() * 5)],
-                        animationDelay: `${Math.random() * 0.5}s`,
-                        animationDuration: `${1.5 + Math.random() * 1}s`,
-                        borderRadius: Math.random() > 0.5 ? '50%' : '0',
-                      }}
+                {/* Open Treasure Chest with confetti */}
+                <div className="relative inline-block mb-8 animate-scale-in">
+                  <div className="relative w-52 h-52 md:w-64 md:h-64 mx-auto">
+                    <img
+                      src="/treasure-open-removebg-preview.png"
+                      alt="Pokisham Treasure Open"
+                      className="w-full h-full object-contain drop-shadow-2xl"
                     />
-                  ))}
+                  </div>
+
+                  {/* Confetti burst */}
+                  <div className="absolute inset-0 overflow-visible pointer-events-none">
+                    {[...Array(30)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute animate-confetti"
+                        style={{
+                          left: '50%',
+                          top: '20%',
+                          width: `${Math.random() * 10 + 5}px`,
+                          height: `${Math.random() * 10 + 5}px`,
+                          backgroundColor: ['#ffd700', '#ffa500', '#ff6347', '#ff69b4', '#87ceeb'][Math.floor(Math.random() * 5)],
+                          animationDelay: `${Math.random() * 0.5}s`,
+                          animationDuration: `${1.5 + Math.random() * 1}s`,
+                          borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 {/* POKISHAM Text */}

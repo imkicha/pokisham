@@ -4,6 +4,7 @@ import { FiArrowRight, FiGift, FiImage, FiCoffee, FiStar } from 'react-icons/fi'
 import ProductCard from '../../components/product/ProductCard';
 import API from '../../api/axios';
 import { PokishamBanner } from '../../components/common/PokishamRibbon';
+import Treasure from '../../components/common/Treasure';
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -62,6 +63,9 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Floating Treasure */}
+      <Treasure />
+
       {/* Pokisham Promotional Banner */}
       <PokishamBanner variant="festive" />
 

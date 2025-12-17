@@ -4,6 +4,15 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDatabase = require('./config/database');
 const errorHandler = require('./middleware/error');
+const {
+  setSecurityHeaders,
+  sanitizeData,
+  preventHPP,
+  additionalSecurityHeaders,
+  validateRequestSize,
+  logSuspiciousActivity,
+  apiLimiter,
+} = require('./middleware/security');
 
 // Load env vars
 dotenv.config();
@@ -13,14 +22,24 @@ connectDatabase();
 
 const app = express();
 
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Trust proxy - important for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
+// Security headers
+app.use(setSecurityHeaders());
+app.use(additionalSecurityHeaders);
+
+// Body parser middleware with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Validate request size
+app.use(validateRequestSize);
 
 // Cookie parser
 app.use(cookieParser());
 
-// CORS
+// CORS with security
 app.use(
   cors({
     origin: [
@@ -29,8 +48,24 @@ app.use(
       "http://localhost:3000"
     ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 600, // 10 minutes
   })
 );
+
+// Data sanitization against NoSQL injection
+app.use(sanitizeData());
+
+// Prevent HTTP Parameter Pollution
+app.use(preventHPP());
+
+// Log suspicious activity
+app.use(logSuspiciousActivity);
+
+// Apply general rate limiting to all routes
+app.use('/api/', apiLimiter);
 
 
 // Routes

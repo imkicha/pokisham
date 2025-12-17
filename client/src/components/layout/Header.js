@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX, FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage, FiGift } from 'react-icons/fi';
+import { FiMenu, FiX, FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -29,8 +29,8 @@ const Header = () => {
   return (
     <header className="bg-white shadow-md sticky top-0 z-50 animate-slide-up">
       {/* Top Bar */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-2 overflow-hidden">
-        <div className="container-custom flex justify-between items-center text-sm">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-1.5 overflow-hidden">
+        <div className="container-custom flex justify-between items-center text-xs">
           <p className="animate-fade-in">Free shipping on orders above ₹999</p>
           <div className="hidden md:flex gap-4 animate-fade-in-delay">
             <span>+91 8682821273</span>
@@ -40,20 +40,22 @@ const Header = () => {
       </div>
 
       {/* Main Header */}
-      <div className="container-custom py-4">
+      <div className="container-custom py-2">
         <div className="flex justify-between items-center">
           {/* Logo with Treasure Chest */}
-          <Link to="/" className="flex items-center gap-2 md:gap-3 transform hover:scale-105 transition-transform group">
-            {/* Treasure Chest Icon */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all">
-                <FiGift className="w-5 h-5 md:w-6 md:h-6 text-white" />
-              </div>
+          <Link to="/" className="flex items-center gap-2 transform hover:scale-105 transition-transform group">
+            {/* Treasure Chest Logo */}
+            <div className="relative flex-shrink-0">
+              <img
+                src="/pokisham-logo.jpg"
+                alt="Pokisham Treasure"
+                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain transition-all"
+              />
               {/* Sparkle effect */}
-              <div className="absolute -top-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-yellow-300 rounded-full animate-ping"></div>
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-bold">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-display font-bold leading-tight">
               <span className="inline-block animate-letter text-gradient" style={{animationDelay: '0s'}}>P</span>
               <span className="inline-block animate-letter text-gradient" style={{animationDelay: '0.1s'}}>o</span>
               <span className="inline-block animate-letter text-gradient" style={{animationDelay: '0.2s'}}>k</span>

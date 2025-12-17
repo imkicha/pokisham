@@ -1,16 +1,29 @@
-# Quick Start Guide - Pokisham E-Commerce Platform
+# 🚀 Pokisham Quick Start Guide
 
-## Prerequisites
+Get up and running with Pokisham in 5 minutes!
+
+## ⚡ Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Node.js (v14 or higher)
-- MongoDB (running locally or use MongoDB Atlas)
-- npm or yarn
+- **Node.js** (v20.12.2 or higher) - [Download](https://nodejs.org/)
+- **MongoDB** (v6.0 or higher) - [Download](https://www.mongodb.com/try/download/community)
+- **npm** or **yarn** package manager
+- **Git** - [Download](https://git-scm.com/)
 
-## Step 1: Clone and Navigate
+## 📦 Step 1: Clone and Install
 
 ```bash
-cd /home/pyspark/kishore/Pokisham
+# Clone the repository
+git clone https://github.com/yourusername/pokisham.git
+cd pokisham
+
+# Install backend dependencies
+cd server
+npm install
+
+# Install frontend dependencies
+cd ../client
+npm install
 ```
 
 ## Step 2: Setup MongoDB
@@ -216,23 +229,60 @@ After creating admin user:
 - **Backend API**: http://localhost:5000/api
 - **Health Check**: http://localhost:5000/health
 
-## Next Steps
+## 🎁 Test Treasure Feature
 
-1. Add categories through admin panel
-2. Add products with images
-3. Test user flow (register, browse, cart, checkout)
-4. Customize design and colors
-5. Add more features from the roadmap
+After logging in:
+1. Navigate to the home page
+2. Wait 2-3 seconds - treasure chest appears
+3. Click on it to see the offer
+4. It reappears every 3 minutes
 
-## Need Help?
+## 📚 Next Steps
 
-- Check README.md for detailed documentation
-- Review API endpoints in README.md
-- Check server logs for errors
-- Verify all environment variables are set correctly
+1. **Read Full Documentation**
+   - [Complete README](README.md)
+   - [Security Guide](SECURITY.md)
 
-## Production Deployment
+2. **Explore Features**
+   - Add categories through admin panel
+   - Add products with images
+   - Test treasure hunt feature
+   - Try payment integration
 
-For production deployment guide, see README.md section on "Deployment"
+3. **Customize**
+   - Update branding in `client/src/index.css`
+   - Modify treasure timing in `Treasure.js`
+   - Configure payment gateway
 
-Happy Coding! 🚀
+## 🐛 Need Help?
+
+1. **Documentation**
+   - [README.md](README.md) - Full documentation
+   - [SECURITY.md](SECURITY.md) - Security guide
+   - API endpoints in README
+
+2. **Troubleshooting**
+   - Check server logs for errors
+   - Verify environment variables
+   - Review browser console for frontend errors
+
+3. **Support**
+   - 📧 Email: hello@pokisham.com
+   - 🐛 Issues: GitHub Issues
+   - 💬 Discussions: Community support
+
+## 🚢 Production Deployment
+
+Ready for production? Check the [Deployment Guide](README.md#deployment) for:
+- Production checklist
+- Railway/Vercel deployment
+- Security hardening
+- Environment configuration
+
+---
+
+**Happy Coding! 🚀**
+
+*Pokisham - Discover Unique Handcrafted Treasures*
+
+[← Back to README](README.md) | [Security Guide →](SECURITY.md)

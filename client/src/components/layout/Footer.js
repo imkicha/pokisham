@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiFacebook, FiInstagram, FiTwitter, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
 
@@ -9,7 +8,14 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* About */}
           <div className="animate-fade-in">
-            <h3 className="text-2xl font-display font-bold text-gradient mb-4 animate-pulse-slow">Pokisham</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <img
+                src="/pokisham-logo.jpg"
+                alt="Pokisham"
+                className="w-12 h-12 object-contain"
+              />
+              <h3 className="text-2xl font-display font-bold text-gradient animate-pulse-slow">Pokisham</h3>
+            </div>
             <p className="text-sm mb-4">
               Bringing you the finest collection of South Indian gifts, custom frames, pottery,
               and traditional Kolu Bommai.

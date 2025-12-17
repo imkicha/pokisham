@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiGift, FiX } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -9,29 +9,72 @@ const Treasure = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [hasCollected, setHasCollected] = useState(false);
 
   useEffect(() => {
     // Only show treasure for authenticated users
     if (!isAuthenticated) {
-      setHasCollected(true);
+      setIsVisible(false);
       return;
     }
 
-    // Check if treasure was already collected today
-    const lastCollected = localStorage.getItem('treasureCollected');
-    const today = new Date().toDateString();
+    // Check if user just logged in
+    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+    const now = Date.now();
 
-    if (lastCollected === today) {
-      setHasCollected(true);
-      return;
-    }
-
-    // Show treasure after 5 seconds
-    const showTimer = setTimeout(() => {
+    // Show immediately if just logged in (always, even if shown recently)
+    if (justLoggedIn) {
+      console.log('User just logged in - showing treasure immediately');
+      sessionStorage.removeItem('justLoggedIn');
       setRandomPosition();
       setIsVisible(true);
-    }, 5000);
+      localStorage.setItem('treasureLastShown', now.toString());
+
+      // Set up movement timer
+      const moveTimer = setInterval(() => {
+        if (!isOpen) {
+          setRandomPosition();
+        }
+      }, 10000);
+
+      return () => clearInterval(moveTimer);
+    }
+
+    // For subsequent appearances, check timing
+    const lastShownTime = localStorage.getItem('treasureLastShown');
+    if (lastShownTime) {
+      // Check if 3 minutes have passed since last shown
+      const timePassed = now - parseInt(lastShownTime);
+      const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
+
+      if (timePassed >= threeMinutes) {
+        // Show immediately if 3 minutes passed
+        console.log('3 minutes passed - showing treasure');
+        setRandomPosition();
+        setIsVisible(true);
+        localStorage.setItem('treasureLastShown', now.toString());
+      } else {
+        // Show after remaining time
+        const remainingTime = threeMinutes - timePassed;
+        console.log(`Treasure will appear in ${Math.round(remainingTime / 1000)} seconds`);
+        const showTimer = setTimeout(() => {
+          setRandomPosition();
+          setIsVisible(true);
+          localStorage.setItem('treasureLastShown', Date.now().toString());
+        }, remainingTime);
+
+        return () => clearTimeout(showTimer);
+      }
+    } else {
+      // First time, show after 2 seconds
+      console.log('First time - showing treasure in 2 seconds');
+      const showTimer = setTimeout(() => {
+        setRandomPosition();
+        setIsVisible(true);
+        localStorage.setItem('treasureLastShown', Date.now().toString());
+      }, 2000);
+
+      return () => clearTimeout(showTimer);
+    }
 
     // Move treasure to random position every 10 seconds
     const moveTimer = setInterval(() => {
@@ -41,37 +84,59 @@ const Treasure = () => {
     }, 10000);
 
     return () => {
-      clearTimeout(showTimer);
       clearInterval(moveTimer);
     };
   }, [isOpen, isAuthenticated]);
 
   const setRandomPosition = () => {
-    const maxX = window.innerWidth - 100;
-    const maxY = window.innerHeight - 100;
-    const x = Math.random() * maxX;
-    const y = Math.random() * maxY;
+    // Adjust treasure size based on screen width
+    const treasureSize = window.innerWidth < 640 ? 80 : 100; // 80px for mobile, 100px for desktop
+    const maxX = window.innerWidth - treasureSize;
+    const maxY = window.innerHeight - treasureSize;
+
+    // Keep treasure visible and away from edges
+    const padding = 20;
+    const x = Math.max(padding, Math.min(Math.random() * maxX, maxX - padding));
+    const y = Math.max(padding, Math.min(Math.random() * maxY, maxY - padding));
+
     setPosition({ x, y });
   };
 
   const handleTreasureClick = () => {
     setIsOpen(true);
-    // Save collection for today
-    localStorage.setItem('treasureCollected', new Date().toDateString());
   };
 
   const handleClose = () => {
     setIsVisible(false);
     setIsOpen(false);
+    // Set next appearance time to 3 minutes from now
+    localStorage.setItem('treasureLastShown', Date.now().toString());
+
+    // Schedule next appearance after 3 minutes
+    setTimeout(() => {
+      setRandomPosition();
+      setIsVisible(true);
+      localStorage.setItem('treasureLastShown', Date.now().toString());
+    }, 3 * 60 * 1000); // 3 minutes
   };
 
   const handleClaim = () => {
     // Navigate to a special discount page or show coupon
     navigate('/products?discount=treasure');
     setIsVisible(false);
+    setIsOpen(false);
+    // Set next appearance time to 3 minutes from now
+    localStorage.setItem('treasureLastShown', Date.now().toString());
+
+    // Schedule next appearance after 3 minutes
+    setTimeout(() => {
+      setRandomPosition();
+      setIsVisible(true);
+      localStorage.setItem('treasureLastShown', Date.now().toString());
+    }, 3 * 60 * 1000); // 3 minutes
   };
 
-  if (hasCollected || !isVisible) return null;
+  if (!isVisible) return null;
 
   return (
     <>
@@ -87,14 +152,13 @@ const Treasure = () => {
         >
           {/* Treasure Chest */}
           <div className="relative group">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 rounded-full blur-xl opacity-75 animate-pulse"></div>
-
-            {/* Chest */}
-            <div className="relative bg-gradient-to-br from-yellow-600 to-yellow-800 w-20 h-20 rounded-lg shadow-2xl transform group-hover:scale-110 transition-transform">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <FiGift className="w-10 h-10 text-white animate-pulse" />
-              </div>
+            {/* Chest - Using Closed Treasure Image - Responsive size */}
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 transform group-hover:scale-110 transition-transform">
+              <img
+                src="/treasure-closed-removebg-preview.png"
+                alt="Pokisham Treasure"
+                className="w-full h-full object-contain drop-shadow-2xl animate-pulse"
+              />
 
               {/* Sparkles */}
               {[...Array(8)].map((_, i) => (
@@ -110,8 +174,8 @@ const Treasure = () => {
               ))}
             </div>
 
-            {/* Tooltip */}
-            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
+            <div className="hidden sm:block absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-xs sm:text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
               Click to open treasure!
               <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
             </div>
@@ -119,9 +183,9 @@ const Treasure = () => {
         </div>
       )}
 
-      {/* Treasure Modal */}
+      {/* Treasure Modal - Responsive padding */}
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-75 p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-75 p-3 sm:p-4 animate-fade-in">
           {/* Confetti Animation */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(50)].map((_, i) => (
@@ -142,51 +206,40 @@ const Treasure = () => {
             ))}
           </div>
 
-          {/* Modal Content */}
-          <div className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl max-w-md w-full p-8 animate-scale-in">
-            {/* Close Button */}
+          {/* Modal Content - Responsive padding and max-width */}
+          <div className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 md:p-8 animate-scale-in">
+            {/* Close Button - Responsive size */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2 hover:bg-white rounded-full transition-colors"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-1.5 sm:p-2 hover:bg-white rounded-full transition-colors"
             >
-              <FiX className="w-6 h-6 text-gray-600" />
+              <FiX className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
             </button>
 
             {/* Treasure Content */}
             <div className="text-center">
-              {/* Animated Treasure Icon */}
-              <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full blur-2xl opacity-50 animate-pulse"></div>
-                <div className="relative bg-gradient-to-br from-yellow-500 to-orange-500 w-32 h-32 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
-                  <FiGift className="w-16 h-16 text-white" />
-                </div>
+              {/* Treasure Offer Image - Responsive margins */}
+              <div className="relative inline-block mb-4 sm:mb-6 animate-scale-in w-full">
+                <img
+                  src="/treasure-offer.png"
+                  alt="Special Offer"
+                  className="w-full h-auto object-contain drop-shadow-2xl rounded-lg"
+                  onError={(e) => {
+                    console.error('Failed to load treasure-offer.png');
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => console.log('Treasure offer image loaded successfully')}
+                />
               </div>
 
-              <h2 className="text-3xl font-display font-bold text-gray-900 mb-3 animate-slide-up">
-                Congratulations!
-              </h2>
-
-              <p className="text-xl text-gray-700 mb-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                You found a treasure!
-              </p>
-
-              <div className="bg-white rounded-lg p-6 my-6 shadow-lg animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 mb-2">
-                  15% OFF
-                </div>
-                <p className="text-gray-600">
-                  Special discount on your next purchase!
-                </p>
-              </div>
-
-              <p className="text-sm text-gray-500 mb-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-                This treasure appears once a day. Come back tomorrow for more surprises!
+              <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6 animate-slide-up px-2" style={{ animationDelay: '0.2s' }}>
+                This treasure appears every 3 minutes. Keep exploring for more surprises!
               </p>
 
               <button
                 onClick={handleClaim}
-                className="btn-primary w-full transform hover:scale-105 transition-all shadow-lg hover:shadow-xl animate-slide-up"
-                style={{ animationDelay: '0.4s' }}
+                className="btn-primary w-full transform hover:scale-105 transition-all shadow-lg hover:shadow-xl animate-slide-up text-sm sm:text-base"
+                style={{ animationDelay: '0.3s' }}
               >
                 Claim Your Reward
               </button>

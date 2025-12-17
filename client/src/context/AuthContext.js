@@ -1,6 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import API from '../api/axios';
 import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 
 const AuthContext = createContext();
 
@@ -17,11 +18,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    // Try to get from secure cookie first, fallback to localStorage
+    const token = Cookies.get('token') || localStorage.getItem('token');
+    const storedUser = Cookies.get('user') || localStorage.getItem('user');
 
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
     }
     setLoading(false);
   }, []);
@@ -31,8 +37,22 @@ export const AuthProvider = ({ children }) => {
       const { data } = await API.post('/auth/login', { email, password });
 
       if (data.success) {
+        // Store in secure cookies with options
+        Cookies.set('token', data.token, {
+          expires: 7, // 7 days
+          secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+          sameSite: 'strict' // CSRF protection
+        });
+        Cookies.set('user', JSON.stringify(data.user), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+
+        // Also keep in localStorage for backward compatibility
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+
         setUser(data.user);
         toast.success('Login successful!');
         return true;
@@ -62,6 +82,19 @@ export const AuthProvider = ({ children }) => {
       const { data } = await API.post('/auth/verify-otp', { userId, otp });
 
       if (data.success) {
+        // Store in secure cookies with options
+        Cookies.set('token', data.token, {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+        Cookies.set('user', JSON.stringify(data.user), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+
+        // Also keep in localStorage for backward compatibility
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
@@ -89,8 +122,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear secure cookies
+    Cookies.remove('token');
+    Cookies.remove('user');
+
+    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
     setUser(null);
     toast.success('Logged out successfully');
   };
@@ -100,6 +139,14 @@ export const AuthProvider = ({ children }) => {
       const { data } = await API.put('/auth/profile', userData);
 
       if (data.success) {
+        // Update secure cookies
+        Cookies.set('user', JSON.stringify(data.user), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+
+        // Update localStorage for backward compatibility
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
         toast.success('Profile updated successfully!');
