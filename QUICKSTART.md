@@ -154,7 +154,7 @@ Login as admin and go to Admin Dashboard > Categories > Add New:
 - Gifts
 - Custom Frames
 - Pottery
-- Kolu Bommai
+- Golu Bommai
 
 ### Add Products
 

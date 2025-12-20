@@ -5,6 +5,7 @@ import API from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import toast from 'react-hot-toast';
+import deliveryImage from '../../assets/images/pokisham_delivery-removebg-preview.png';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -130,6 +131,31 @@ const OrderDetailPage = () => {
           >
             <FiDownload /> Download Invoice
           </button>
+        </div>
+
+        {/* Delivery Illustration Banner */}
+        <div className="bg-gradient-to-r from-primary-500 to-secondary-500 rounded-xl p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <img
+              src={deliveryImage}
+              alt="Your order is on its way"
+              className="w-32 h-32 sm:w-40 sm:h-40 object-contain"
+            />
+            <div className="text-center sm:text-left text-white">
+              <h2 className="text-xl sm:text-2xl font-display font-bold mb-2">
+                {order.orderStatus === 'Delivered' ? 'Order Delivered!' :
+                 order.orderStatus === 'Shipped' || order.orderStatus === 'Out for Delivery' ? 'Your order is on its way!' :
+                 order.orderStatus === 'Cancelled' ? 'Order Cancelled' :
+                 'We are preparing your order'}
+              </h2>
+              <p className="text-sm sm:text-base opacity-90">
+                {order.orderStatus === 'Delivered' ? 'Thank you for shopping with Pokisham!' :
+                 order.orderStatus === 'Shipped' || order.orderStatus === 'Out for Delivery' ? 'Your gift will reach you soon' :
+                 order.orderStatus === 'Cancelled' ? 'We hope to serve you again soon' :
+                 'Your gift is being carefully packed with love'}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -1,5 +1,4 @@
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
 const hpp = require('hpp');
 
@@ -28,11 +27,11 @@ const setSecurityHeaders = () => {
  * Rate limiting for authentication routes
  */
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
   max: 5, // Limit each IP to 5 requests per windowMs
   message: {
     success: false,
-    message: 'Too many login attempts, please try again after 15 minutes',
+    message: 'Too many login attempts, please try again after 5 minutes',
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -58,13 +57,21 @@ const otpLimiter = rateLimit({
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit in development
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for GET requests to public endpoints in development
+    if (process.env.NODE_ENV !== 'production') {
+      const publicGetEndpoints = ['/api/categories', '/api/products'];
+      return req.method === 'GET' && publicGetEndpoints.some(endpoint => req.path.startsWith(endpoint));
+    }
+    return false;
+  }
 });
 
 /**
@@ -84,14 +91,7 @@ const passwordResetLimiter = rateLimit({
 /**
  * Data sanitization against NoSQL injection
  */
-const sanitizeData = () => {
-  return mongoSanitize({
-    replaceWith: '_',
-    onSanitize: ({ req, key }) => {
-      console.warn(`Sanitized potentially malicious input in ${key}`);
-    },
-  });
-};
+
 
 /**
  * Prevent HTTP Parameter Pollution
@@ -106,6 +106,11 @@ const preventHPP = () => {
       'page',
       'limit',
       'quantity',
+      'includeTenant',
+      'isFeatured',
+      'isTrending',
+      'search',
+      'status',
     ],
   });
 };
@@ -148,9 +153,14 @@ const additionalSecurityHeaders = (req, res, next) => {
  */
 const validateRequestSize = (req, res, next) => {
   const contentLength = req.headers['content-length'];
+  const contentType = req.headers['content-type'] || '';
 
-  if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
-    // 10MB limit
+  // Allow larger payloads for multipart/form-data (file uploads) - 50MB limit
+  // For regular JSON requests, use 10MB limit
+  const isMultipart = contentType.includes('multipart/form-data');
+  const maxSize = isMultipart ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+
+  if (contentLength && parseInt(contentLength) > maxSize) {
     return res.status(413).json({
       success: false,
       message: 'Request entity too large',
@@ -222,7 +232,6 @@ module.exports = {
   otpLimiter,
   apiLimiter,
   passwordResetLimiter,
-  sanitizeData,
   preventHPP,
   additionalSecurityHeaders,
   validateRequestSize,

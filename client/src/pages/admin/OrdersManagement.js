@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiEye, FiDownload } from 'react-icons/fi';
+import { FiEye, FiDownload, FiMail, FiMessageCircle, FiSend } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const OrdersManagement = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [sharingInvoice, setSharingInvoice] = useState(false);
 
   useEffect(() => {
     document.title = 'Orders Management - Pokisham Admin';
@@ -33,8 +37,10 @@ const OrdersManagement = () => {
       const { data } = await API.put(`/orders/${orderId}/status`, { status });
       if (data.success) {
         toast.success('Order status updated successfully');
+        // Update the selected order with new status
+        setSelectedOrder(data.order);
+        // Refresh the orders list
         fetchOrders();
-        setSelectedOrder(null);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update order status');
@@ -60,6 +66,58 @@ const OrdersManagement = () => {
       toast.success('Invoice downloaded successfully');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to download invoice');
+    }
+  };
+
+  // Send notification (Email/WhatsApp)
+  const handleSendNotification = async (orderId, type) => {
+    setSendingNotification(true);
+    try {
+      const { data } = await API.post(`/orders/${orderId}/notify`, {
+        type,
+        trackingNumber: trackingNumber || undefined,
+      });
+
+      if (data.success) {
+        // Handle Email result
+        if (data.results.email) {
+          if (data.results.email.success) {
+            toast.success('Email sent successfully!');
+          } else {
+            toast.error(`Email failed: ${data.results.email.error}`);
+          }
+        }
+
+        // Handle WhatsApp result - open WhatsApp Web
+        if (data.results.whatsapp) {
+          if (data.results.whatsapp.success) {
+            window.open(data.results.whatsapp.url, '_blank');
+            toast.success('WhatsApp opened - send the message!');
+          } else {
+            toast.error(`WhatsApp failed: ${data.results.whatsapp.error}`);
+          }
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send notification');
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  // Share invoice via WhatsApp (uploads PDF to Cloudinary)
+  const handleShareInvoice = async (orderId) => {
+    setSharingInvoice(true);
+    try {
+      const { data } = await API.post(`/orders/${orderId}/share-invoice`);
+      if (data.success) {
+        window.open(data.whatsappUrl, '_blank');
+        toast.success('WhatsApp opened with invoice link!');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to share invoice');
+    } finally {
+      setSharingInvoice(false);
     }
   };
 
@@ -264,12 +322,68 @@ const OrdersManagement = () => {
                   </select>
                 </div>
 
-                <div>
+                {/* Tracking Number (for Shipped status) */}
+                {selectedOrder.orderStatus === 'Shipped' && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Tracking Number (Optional)</h3>
+                    <input
+                      type="text"
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="Enter tracking number"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                )}
+
+                {/* Send Notification Section */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <FiSend className="text-primary-600" />
+                    Send Status Notification
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Notify customer about order status: <span className="font-semibold text-primary-600">{selectedOrder.orderStatus}</span>
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => handleSendNotification(selectedOrder._id, 'email')}
+                      disabled={sendingNotification}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FiMail /> Email
+                    </button>
+                    <button
+                      onClick={() => handleSendNotification(selectedOrder._id, 'whatsapp')}
+                      disabled={sendingNotification}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FaWhatsapp /> WhatsApp
+                    </button>
+                    <button
+                      onClick={() => handleSendNotification(selectedOrder._id, 'both')}
+                      disabled={sendingNotification}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FiMessageCircle /> Both
+                    </button>
+                  </div>
+                </div>
+
+                {/* Download Invoice & Share */}
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleDownloadInvoice(selectedOrder._id, selectedOrder.orderNumber)}
-                    className="btn-primary w-full flex items-center justify-center gap-2"
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium transition-colors"
                   >
-                    <FiDownload /> Download Invoice
+                    <FiDownload /> Download
+                  </button>
+                  <button
+                    onClick={() => handleShareInvoice(selectedOrder._id)}
+                    disabled={sharingInvoice}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  >
+                    <FaWhatsapp /> {sharingInvoice ? 'Uploading...' : 'Share PDF'}
                   </button>
                 </div>
 

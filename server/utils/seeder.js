@@ -26,7 +26,7 @@ const categories = [
     isActive: true,
   },
   {
-    name: 'Kolu Bommai',
+    name: 'Golu Bommai',
     description: 'Traditional festival dolls and decorations',
     slug: 'kolu-bommai',
     isActive: true,

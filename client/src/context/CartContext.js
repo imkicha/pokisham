@@ -29,6 +29,28 @@ export const CartProvider = ({ children }) => {
       setLoading(true);
       const { data } = await API.get('/cart');
       if (data.success) {
+        // Filter out items with deleted products on the client side as well
+        if (data.cart && data.cart.items) {
+          const validItems = data.cart.items.filter(item => item.product !== null);
+          // If some items were invalid, remove them from server
+          if (validItems.length !== data.cart.items.length) {
+            const invalidItems = data.cart.items.filter(item => item.product === null);
+            // Remove invalid items from server silently
+            for (const item of invalidItems) {
+              try {
+                await API.delete(`/cart/${item._id}`);
+              } catch (err) {
+                console.log('Error removing invalid cart item:', err);
+              }
+            }
+            // Re-fetch the cleaned cart
+            const { data: cleanedData } = await API.get('/cart');
+            if (cleanedData.success) {
+              setCart(cleanedData.cart);
+              return;
+            }
+          }
+        }
         setCart(data.cart);
       }
     } catch (error) {
@@ -109,15 +131,20 @@ export const CartProvider = ({ children }) => {
   const getCartTotal = () => {
     if (!cart || !cart.items || cart.items.length === 0) return 0;
 
-    return cart.items.reduce((total, item) => {
-      const price = item.product?.discountPrice || item.product?.price || 0;
-      return total + price * item.quantity;
-    }, 0);
+    return cart.items
+      .filter((item) => item.product !== null) // Exclude deleted products
+      .reduce((total, item) => {
+        const price = item.product?.discountPrice || item.product?.price || 0;
+        return total + price * item.quantity;
+      }, 0);
   };
 
   const getCartCount = () => {
     if (!cart || !cart.items) return 0;
-    return cart.items.reduce((count, item) => count + item.quantity, 0);
+    // Only count items where product still exists
+    return cart.items
+      .filter((item) => item.product !== null)
+      .reduce((count, item) => count + item.quantity, 0);
   };
 
   const value = {

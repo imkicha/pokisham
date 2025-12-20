@@ -1,7 +1,7 @@
 {
   "short_name": "Pokisham",
   "name": "Pokisham - Handcrafted Treasures",
-  "description": "Discover unique handcrafted gifts, custom frames, pottery, and traditional Kolu Bommai",
+  "description": "Discover unique handcrafted gifts, custom frames, pottery, and traditional Golu Bommai. Shop authentic South Indian treasures.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -27,9 +27,53 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#ec5578",
   "background_color": "#fef5e7",
-  "orientation": "portrait-primary"
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Shop Products",
+      "short_name": "Products",
+      "description": "Browse all products",
+      "url": "/products",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View your orders",
+      "url": "/orders",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Shopping Cart",
+      "short_name": "Cart",
+      "description": "View your cart",
+      "url": "/cart",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Pokisham Home"
+    },
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pokisham Mobile"
+    }
+  ]
 }

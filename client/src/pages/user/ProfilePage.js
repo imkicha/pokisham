@@ -10,6 +10,7 @@ const ProfilePage = () => {
   const { user, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -26,22 +27,46 @@ const ProfilePage = () => {
   }, [user]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    // For phone, only allow digits and limit to 10
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData({ ...formData, phone: digitsOnly });
+
+      // Validate phone number
+      if (digitsOnly.length > 0 && digitsOnly.length !== 10) {
+        setPhoneError('Phone number must be exactly 10 digits');
+      } else {
+        setPhoneError('');
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSave = async () => {
+    // Validate phone before saving
+    if (formData.phone && formData.phone.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data } = await API.put('/users/profile', formData);
+      console.log('Sending profile update:', formData);
+      const { data } = await API.put('/auth/profile', formData);
+      console.log('Profile update response:', data);
       if (data.success) {
         updateUser(data.user);
         toast.success('Profile updated successfully');
         setEditing(false);
+      } else {
+        toast.error(data.message || 'Failed to update profile');
       }
     } catch (error) {
+      console.error('Profile update error:', error);
+      console.error('Error response:', error.response);
       toast.error(error.response?.data?.message || 'Failed to update profile');
     }
     setLoading(false);
@@ -52,6 +77,7 @@ const ProfilePage = () => {
       name: user?.name || '',
       phone: user?.phone || '',
     });
+    setPhoneError('');
     setEditing(false);
   };
 
@@ -227,15 +253,22 @@ const ProfilePage = () => {
                       Phone Number
                     </label>
                     {editing ? (
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                        placeholder="Enter your phone number"
-                        pattern="[0-9]{10}"
-                      />
+                      <div>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                            phoneError ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter 10 digit phone number"
+                          maxLength={10}
+                        />
+                        {phoneError && (
+                          <p className="text-red-500 text-sm mt-1">{phoneError}</p>
+                        )}
+                      </div>
                     ) : (
                       <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{user?.phone || 'Not set'}</p>
                     )}

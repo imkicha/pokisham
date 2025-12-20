@@ -7,10 +7,9 @@ const WelcomePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [showContent, setShowContent] = useState(false);
-  const [letterIndex, setLetterIndex] = useState(0);
   const [treasureOpen, setTreasureOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
-  const logoText = 'POKISHAM';
+  const [logoVisible, setLogoVisible] = useState(false);
 
   useEffect(() => {
     // Set page title
@@ -30,22 +29,15 @@ const WelcomePage = () => {
 
   }, [navigate]);
 
-  // Handle treasure opening - start letter reveal animation
+  // Handle treasure opening - show logo after a short delay
   useEffect(() => {
     if (treasureOpen) {
-      const interval = setInterval(() => {
-        setLetterIndex((prev) => {
-          if (prev < logoText.length) {
-            return prev + 1;
-          }
-          clearInterval(interval);
-          return prev;
-        });
-      }, 150);
-
-      return () => clearInterval(interval);
+      const timer = setTimeout(() => {
+        setLogoVisible(true);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [treasureOpen, logoText.length]);
+  }, [treasureOpen]);
 
   const handleEnter = () => {
     localStorage.setItem('hasSeenWelcome', 'true');
@@ -155,7 +147,7 @@ const WelcomePage = () => {
             {treasureOpen && (
               <>
                 {/* Open Treasure Chest with confetti */}
-                <div className="relative inline-block mb-8 animate-scale-in">
+                <div className="relative inline-block mb-2 animate-scale-in">
                   <div className="relative w-52 h-52 md:w-64 md:h-64 mx-auto">
                     <img
                       src="/treasure-open-removebg-preview.png"
@@ -185,26 +177,14 @@ const WelcomePage = () => {
                   </div>
                 </div>
 
-                {/* POKISHAM Text */}
-                <h1 className="text-7xl md:text-9xl font-display font-bold mb-4 animate-scale-in">
-                  {logoText.split('').map((letter, index) => (
-                    <span
-                      key={index}
-                      className={`inline-block ${
-                        index < letterIndex ? 'animate-letter' : 'opacity-0'
-                      }`}
-                      style={{
-                        animationDelay: `${index * 0.1}s`,
-                        background: 'linear-gradient(45deg, #fff, #ffd700, #fff)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                      }}
-                    >
-                      {letter}
-                    </span>
-                  ))}
-                </h1>
+                {/* Pokisham Logo Image */}
+                <div className={`-mt-4 mb-4 transition-all duration-700 ${logoVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+                  <img
+                    src="/pokisham-text-logo__1_-removebg-preview.png"
+                    alt="Pokisham"
+                    className="h-16 sm:h-20 md:h-24 lg:h-28 mx-auto object-contain drop-shadow-2xl"
+                  />
+                </div>
               </>
             )}
 

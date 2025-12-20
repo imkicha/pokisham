@@ -17,6 +17,20 @@ exports.getCart = async (req, res) => {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
+    // Clean up items where product has been deleted
+    const originalLength = cart.items.length;
+    cart.items = cart.items.filter((item) => item.product !== null);
+
+    // Save if items were removed
+    if (cart.items.length !== originalLength) {
+      await cart.save();
+      // Re-fetch to get clean data
+      cart = await Cart.findOne({ user: req.user._id }).populate({
+        path: 'items.product',
+        select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      });
+    }
+
     res.status(200).json({
       success: true,
       cart,

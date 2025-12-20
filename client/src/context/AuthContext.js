@@ -2,6 +2,7 @@ import { createContext, useState, useContext, useEffect } from 'react';
 import API from '../api/axios';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
+import { getFCMToken, onMessageListener } from '../firebase';
 
 const AuthContext = createContext();
 
@@ -121,6 +122,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Register FCM token for push notifications
+  const registerFCMToken = async () => {
+    try {
+      const fcmToken = await getFCMToken();
+      if (fcmToken) {
+        await API.put('/auth/fcm-token', { fcmToken });
+        console.log('FCM token registered successfully');
+      }
+    } catch (error) {
+      console.log('Failed to register FCM token:', error.message);
+    }
+  };
+
+  // Listen for foreground notifications
+  useEffect(() => {
+    if (user) {
+      // Register FCM token when user logs in
+      registerFCMToken();
+
+      // Listen for foreground messages
+      const unsubscribe = onMessageListener()
+        .then((payload) => {
+          if (payload) {
+            toast(payload.notification?.body || 'New notification', {
+              icon: '🔔',
+              duration: 5000,
+            });
+          }
+        })
+        .catch((err) => console.log('Message listener error:', err));
+
+      return () => unsubscribe;
+    }
+  }, [user]);
+
   const logout = () => {
     // Clear secure cookies
     Cookies.remove('token');
@@ -158,6 +194,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user state directly (useful when API call is made elsewhere)
+  const updateUser = (userData) => {
+    // Update secure cookies
+    Cookies.set('user', JSON.stringify(userData), {
+      expires: 7,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    // Update localStorage for backward compatibility
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const value = {
     user,
     loading,
@@ -167,6 +217,7 @@ export const AuthProvider = ({ children }) => {
     resendOTP,
     logout,
     updateProfile,
+    updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isSuperAdmin: user?.role === 'superadmin',

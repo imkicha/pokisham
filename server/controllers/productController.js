@@ -108,12 +108,73 @@ exports.getProduct = async (req, res) => {
   }
 };
 
-// @desc    Create product (Admin)
+// @desc    Create product (Admin/Tenant)
 // @route   POST /api/products
-// @access  Private/Admin
+// @access  Private/Admin/Tenant
 exports.createProduct = async (req, res) => {
   try {
     const productData = { ...req.body };
+
+    // Check if tenant has categories and validate category selection
+    if (req.user.role === 'tenant' && req.user.tenantId) {
+      const Category = require('../models/Category');
+
+      // Get available categories for tenant (own + global)
+      const availableCategories = await Category.find({
+        $or: [
+          { tenantId: req.user.tenantId },
+          { tenantId: null }
+        ],
+        isActive: true
+      }).select('_id name tenantId');
+
+      // If category is provided, validate it
+      if (productData.category) {
+        const selectedCategory = await Category.findById(productData.category);
+
+        if (!selectedCategory) {
+          return res.status(400).json({
+            success: false,
+            message: 'Selected category not found'
+          });
+        }
+
+        // Check if category belongs to tenant or is global
+        const isTenantCategory = selectedCategory.tenantId &&
+                                  selectedCategory.tenantId.toString() === req.user.tenantId.toString();
+        const isGlobalCategory = !selectedCategory.tenantId;
+
+        if (!isTenantCategory && !isGlobalCategory) {
+          return res.status(403).json({
+            success: false,
+            message: 'You can only use your own categories or global categories'
+          });
+        }
+      } else {
+        // No category provided - check if any categories exist
+        if (availableCategories.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'No categories available. Please create a category first or select from available categories.',
+            action: 'no_categories',
+            hasGlobalCategories: false,
+            hasTenantCategories: false
+          });
+        } else {
+          // Categories exist but none selected
+          return res.status(400).json({
+            success: false,
+            message: 'Please select a category for your product',
+            action: 'select_category',
+            availableCategories: availableCategories.map(cat => ({
+              _id: cat._id,
+              name: cat.name,
+              type: cat.tenantId ? 'tenant' : 'global'
+            }))
+          });
+        }
+      }
+    }
 
     // Parse tags if it's a string (from FormData)
     if (typeof productData.tags === 'string') {

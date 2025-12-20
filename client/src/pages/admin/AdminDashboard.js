@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp, FiMessageCircle, FiGrid } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const AdminDashboard = () => {
@@ -64,6 +64,20 @@ const AdminDashboard = () => {
       icon: FiUsers,
       color: 'text-purple-600',
     },
+    {
+      title: 'Contact Messages',
+      description: 'View and respond to customer inquiries',
+      link: '/admin/messages',
+      icon: FiMessageCircle,
+      color: 'text-pink-600',
+    },
+    {
+      title: 'Manage Categories',
+      description: 'Add, edit, or remove product categories',
+      link: '/admin/categories',
+      icon: FiGrid,
+      color: 'text-orange-600',
+    },
   ];
 
   return (
@@ -102,7 +116,7 @@ const AdminDashboard = () => {
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (

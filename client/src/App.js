@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -11,12 +10,15 @@ import Footer from './components/layout/Footer';
 
 // Components
 import WelcomeRedirect from './components/common/WelcomeRedirect';
+import InstallPWA from './components/common/InstallPWA';
 
 // Pages
 import WelcomePage from './pages/WelcomePage';
 import HomePage from './pages/user/HomePage';
 import ProductsPage from './pages/user/ProductsPage';
 import ProductDetail from './pages/user/ProductDetail';
+import AboutPage from './pages/user/AboutPage';
+import ContactPage from './pages/user/ContactPage';
 import CartPage from './pages/user/CartPage';
 import CheckoutPage from './pages/user/CheckoutPage';
 import WishlistPage from './pages/user/WishlistPage';
@@ -32,6 +34,8 @@ import ProductsManagement from './pages/admin/ProductsManagement';
 import AddProduct from './pages/admin/AddProduct';
 import EditProduct from './pages/admin/EditProduct';
 import OrdersManagement from './pages/admin/OrdersManagement';
+import ContactMessages from './pages/admin/ContactMessages';
+import CategoriesManagement from './pages/admin/CategoriesManagement';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import TenantManagement from './pages/superadmin/TenantManagement';
 import SuperAdminProducts from './pages/superadmin/SuperAdminProducts';
@@ -44,6 +48,8 @@ import TenantOrders from './pages/tenant/TenantOrders';
 import TenantOrderDetail from './pages/tenant/TenantOrderDetail';
 import TenantProfile from './pages/tenant/TenantProfile';
 import TenantApplication from './pages/TenantApplication';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 // Protected Route Component
 // eslint-disable-next-line no-unused-vars
@@ -117,6 +123,7 @@ function App() {
             />
 
           <WelcomeRedirect />
+          <InstallPWA />
 
           <Routes>
             {/* Welcome Page */}
@@ -147,6 +154,22 @@ function App() {
                 </Layout>
               }
             />
+            <Route
+              path="/about"
+              element={
+                <Layout>
+                  <AboutPage />
+                </Layout>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <Layout>
+                  <ContactPage />
+                </Layout>
+              }
+            />
 
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
@@ -160,6 +183,24 @@ function App() {
               element={
                 <Layout>
                   <TenantApplication />
+                </Layout>
+              }
+            />
+
+            {/* Legal Pages */}
+            <Route
+              path="/privacy"
+              element={
+                <Layout>
+                  <PrivacyPolicy />
+                </Layout>
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <Layout>
+                  <TermsOfService />
                 </Layout>
               }
             />
@@ -386,6 +427,26 @@ function App() {
                 <ProtectedRoute adminOnly={true}>
                   <Layout>
                     <OrdersManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/messages"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <ContactMessages />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <CategoriesManagement />
                   </Layout>
                 </ProtectedRoute>
               }

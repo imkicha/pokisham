@@ -50,11 +50,11 @@ const ProductCard = ({ product }) => {
   return (
     <Link to={`/product/${product._id}`} className="card group overflow-hidden">
       {/* Image */}
-      <div className="relative overflow-hidden aspect-square">
+      <div className="relative overflow-hidden aspect-square bg-gray-100">
         <img
           src={product.images?.[0]?.url || '/placeholder.png'}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
         />
 
         {/* Badges */}

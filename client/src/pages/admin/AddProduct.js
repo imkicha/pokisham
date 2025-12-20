@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiX, FiPlus } from 'react-icons/fi';
+import { FiX, FiPlus, FiRefreshCw } from 'react-icons/fi';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
@@ -9,6 +9,7 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [hasVariants, setHasVariants] = useState(false);
@@ -33,16 +34,40 @@ const AddProduct = () => {
   useEffect(() => {
     document.title = 'Add Product - Pokisham Admin';
     fetchCategories();
+
+    // Refetch categories when window regains focus (user returns from another tab)
+    const handleFocus = () => {
+      fetchCategories();
+    };
+
+    // Refetch categories periodically (every 10 seconds) to catch new categories
+    const intervalId = setInterval(() => {
+      fetchCategories();
+    }, 10000);
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (showToast = false) => {
     try {
+      setLoadingCategories(true);
       const { data } = await API.get('/categories');
       if (data.success) {
         setCategories(data.categories);
+        if (showToast) {
+          toast.success(`${data.categories.length} categories loaded`);
+        }
       }
     } catch (error) {
-      toast.error('Failed to fetch categories');
+      console.error('Error fetching categories:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch categories';
+      toast.error(errorMessage);
+    } finally {
+      setLoadingCategories(false);
     }
   };
 
@@ -244,7 +269,19 @@ const AddProduct = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Category*</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">Category*</label>
+              <button
+                type="button"
+                onClick={() => fetchCategories(true)}
+                disabled={loadingCategories}
+                className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 disabled:opacity-50"
+                title="Refresh categories"
+              >
+                <FiRefreshCw className={`w-4 h-4 ${loadingCategories ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
             <select
               name="category"
               value={formData.category}
@@ -259,6 +296,11 @@ const AddProduct = () => {
                 </option>
               ))}
             </select>
+            {categories.length === 0 && !loadingCategories && (
+              <p className="text-sm text-amber-600 mt-1">
+                No categories found. Create one first or click refresh.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

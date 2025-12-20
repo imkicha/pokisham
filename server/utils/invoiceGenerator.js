@@ -23,6 +23,27 @@ const generateInvoice = (order, res) => {
   doc.end();
 };
 
+// Generate invoice as buffer for uploading to Cloudinary
+const generateInvoiceBuffer = (order) => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50 });
+    const chunks = [];
+
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Add content to PDF
+    generateHeader(doc);
+    generateCustomerInformation(doc, order);
+    generateInvoiceTable(doc, order);
+    generateFooter(doc, order);
+
+    // Finalize the PDF
+    doc.end();
+  });
+};
+
 function generateHeader(doc) {
   // Add logo if URL is provided
   // To use a logo, uncomment the lines below and add your Cloudinary URL:
@@ -51,6 +72,16 @@ function generateCustomerInformation(doc, order) {
 
   const customerInformationTop = 180;
 
+  // Handle different field names for shipping address
+  const shipping = order.shippingAddress || {};
+  const customerName = shipping.name || shipping.fullName || 'Customer';
+  const addressLine1 = shipping.addressLine1 || shipping.address || '';
+  const addressLine2 = shipping.addressLine2 || '';
+  const city = shipping.city || '';
+  const state = shipping.state || '';
+  const pincode = shipping.pincode || shipping.postalCode || '';
+  const phone = shipping.phone || '';
+
   doc
     .fontSize(10)
     .text('Invoice Number:', 50, customerInformationTop)
@@ -65,20 +96,12 @@ function generateCustomerInformation(doc, order) {
     .font('Helvetica-Bold')
     .text('Bill To:', 300, customerInformationTop)
     .font('Helvetica')
-    .text(order.shippingAddress.name, 300, customerInformationTop + 15)
-    .text(order.shippingAddress.addressLine1, 300, customerInformationTop + 30)
-    .text(
-      order.shippingAddress.addressLine2 || '',
-      300,
-      customerInformationTop + 45
-    )
-    .text(
-      `${order.shippingAddress.city}, ${order.shippingAddress.state}`,
-      300,
-      customerInformationTop + 60
-    )
-    .text(order.shippingAddress.pincode, 300, customerInformationTop + 75)
-    .text(order.shippingAddress.phone, 300, customerInformationTop + 90)
+    .text(customerName, 300, customerInformationTop + 15)
+    .text(addressLine1, 300, customerInformationTop + 30)
+    .text(addressLine2, 300, customerInformationTop + 45)
+    .text(`${city}, ${state}`, 300, customerInformationTop + 60)
+    .text(pincode, 300, customerInformationTop + 75)
+    .text(phone, 300, customerInformationTop + 90)
     .moveDown();
 
   generateHr(doc, 290);
@@ -249,4 +272,4 @@ function formatDate(date) {
   return `${day}/${month}/${year}`;
 }
 
-module.exports = generateInvoice;
+module.exports = { generateInvoice, generateInvoiceBuffer };

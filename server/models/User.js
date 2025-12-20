@@ -82,6 +82,10 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    fcmToken: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

@@ -1,9 +1,13 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
+const User = require('../models/User');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const generateInvoice = require('../utils/invoiceGenerator');
+const { generateInvoice, generateInvoiceBuffer } = require('../utils/invoiceGenerator');
+const cloudinary = require('../config/cloudinary');
+const { sendOrderConfirmationSMS, sendNewOrderNotificationToAdmins } = require('../utils/sms');
+const { sendOrderConfirmation, sendOrderStatusEmail, getWhatsAppMessage, getOrderStatusTemplates } = require('../utils/email');
 
 // Initialize Razorpay (lazy initialization)
 let razorpay = null;
@@ -195,6 +199,47 @@ exports.createOrder = async (req, res) => {
 
     // Clear user cart
     await Cart.findOneAndUpdate({ user: req.user._id }, { items: [] });
+
+    // Send notifications to user (Email + Push)
+    try {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        // 1. Send Email notification
+        if (user.email) {
+          await sendOrderConfirmation(user.email, user.name, order);
+          console.log('Order confirmation email sent to:', user.email);
+        }
+
+        // 2. Send Firebase Push notification to customer
+        const phoneNumber = user.phone || shippingAddress.phone;
+        await sendOrderConfirmationSMS(
+          phoneNumber,
+          user.name,
+          order.orderNumber,
+          order.totalPrice,
+          user.fcmToken || null
+        );
+
+        // 3. Send notification to all admins
+        const admins = await User.find({
+          role: { $in: ['admin', 'superadmin'] },
+          fcmToken: { $ne: '' }
+        }).select('fcmToken');
+
+        const adminTokens = admins.map(a => a.fcmToken).filter(Boolean);
+        if (adminTokens.length > 0) {
+          await sendNewOrderNotificationToAdmins(
+            adminTokens,
+            user.name,
+            order.orderNumber,
+            order.totalPrice
+          );
+          console.log('Admin notification sent to', adminTokens.length, 'admins');
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send order notifications:', notificationError);
+    }
 
     res.status(201).json({
       success: true,
@@ -527,8 +572,9 @@ exports.generateOrderInvoice = async (req, res) => {
       });
     }
 
-    // Check if user owns this order or is admin
-    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // Check if user owns this order or is admin/superadmin
+    if (order.user._id.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this order',
@@ -539,6 +585,161 @@ exports.generateOrderInvoice = async (req, res) => {
     generateInvoice(order, res);
   } catch (error) {
     console.error('Invoice generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Get order status notification templates
+// @route   GET /api/orders/notification-templates
+// @access  Private/Admin
+exports.getNotificationTemplates = async (req, res) => {
+  try {
+    const templates = getOrderStatusTemplates();
+    res.status(200).json({
+      success: true,
+      templates,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Send order status notification (Email/WhatsApp)
+// @route   POST /api/orders/:id/notify
+// @access  Private/Admin
+exports.sendOrderNotification = async (req, res) => {
+  try {
+    const { type, trackingNumber } = req.body; // type: 'email' | 'whatsapp' | 'both'
+
+    const order = await Order.findById(req.params.id).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    const customer = order.user;
+    const status = order.orderStatus;
+    const results = { email: null, whatsapp: null };
+
+    // Send Email notification
+    if (type === 'email' || type === 'both') {
+      if (customer?.email) {
+        const emailResult = await sendOrderStatusEmail(
+          customer.email,
+          customer.name,
+          order,
+          status,
+          trackingNumber
+        );
+        results.email = emailResult;
+      } else {
+        results.email = { success: false, error: 'No email address available' };
+      }
+    }
+
+    // Generate WhatsApp message (opens WhatsApp Web/App)
+    if (type === 'whatsapp' || type === 'both') {
+      const phone = customer?.phone || order.shippingAddress?.phone;
+      if (phone) {
+        const message = getWhatsAppMessage(customer?.name || order.shippingAddress?.fullName, order, status, trackingNumber);
+        if (message) {
+          // Format phone number (remove +, spaces, etc.)
+          const cleanPhone = phone.replace(/[^0-9]/g, '');
+          const whatsappPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+          const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+          results.whatsapp = { success: true, url: whatsappUrl, message };
+        } else {
+          results.whatsapp = { success: false, error: 'No template for this status' };
+        }
+      } else {
+        results.whatsapp = { success: false, error: 'No phone number available' };
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      results,
+    });
+  } catch (error) {
+    console.error('Send notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Share invoice via WhatsApp (upload to Cloudinary and return URL)
+// @route   POST /api/orders/:id/share-invoice
+// @access  Private/Admin
+exports.shareInvoice = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    // Check if user owns this order or is admin/superadmin
+    if (order.user._id.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to access this order',
+      });
+    }
+
+    // Generate PDF buffer
+    const pdfBuffer = await generateInvoiceBuffer(order);
+
+    // Convert buffer to base64 data URI for Cloudinary upload
+    const base64Pdf = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+
+    // Upload to Cloudinary with proper settings for PDF
+    const uploadResult = await cloudinary.uploader.upload(base64Pdf, {
+      resource_type: 'raw',
+      folder: 'pokisham/invoices',
+      public_id: `invoice-${order.orderNumber}`,
+      overwrite: true,
+      type: 'upload',
+      access_mode: 'public',
+    });
+
+    // Get customer phone
+    const phone = order.user?.phone || order.shippingAddress?.phone || '';
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const whatsappPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+
+    // Create download URL with fl_attachment flag for direct download
+    // This forces the browser to download the file instead of trying to display it
+    const downloadUrl = uploadResult.secure_url.replace('/upload/', '/upload/fl_attachment/');
+
+    // Create WhatsApp message with PDF link
+    const customerName = order.shippingAddress?.name || order.shippingAddress?.fullName || order.user?.name || 'Customer';
+    const message = `📄 *Invoice - Order #${order.orderNumber}*\n\nHi ${customerName},\n\nPlease find your invoice below:\n\n🛒 Order: #${order.orderNumber}\n💰 Total: ₹${order.totalPrice}\n📅 Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}\n📦 Status: ${order.orderStatus}\n\n📎 Download Invoice:\n${downloadUrl}\n\nThank you for shopping with Pokisham! 🛍️`;
+
+    const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+
+    res.status(200).json({
+      success: true,
+      invoiceUrl: downloadUrl,
+      whatsappUrl,
+      message,
+    });
+  } catch (error) {
+    console.error('Share invoice error:', error);
     res.status(500).json({
       success: false,
       message: error.message,

@@ -292,34 +292,80 @@ exports.getMe = async (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private
 exports.updateProfile = async (req, res) => {
+  console.log('=== UPDATE PROFILE CALLED ===');
+  console.log('req.user:', req.user ? { _id: req.user._id, email: req.user.email } : 'NOT SET');
+  console.log('req.body:', req.body);
+
   try {
+    // Check if user is authenticated
+    if (!req.user || !req.user._id) {
+      console.log('ERROR: req.user not set - authentication failed');
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated',
+      });
+    }
+
     const { name, phone } = req.body;
 
-    const user = await User.findById(req.user._id);
-
-    if (user) {
-      user.name = name || user.name;
-      user.phone = phone || user.phone;
-
-      const updatedUser = await user.save();
-
-      res.status(200).json({
-        success: true,
-        user: {
-          _id: updatedUser._id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          phone: updatedUser.phone,
-          role: updatedUser.role,
-        },
+    // Validate phone number if provided
+    if (phone && phone.length !== 10) {
+      console.log('ERROR: Phone validation failed, length:', phone.length);
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number must be exactly 10 digits',
       });
-    } else {
-      res.status(404).json({
+    }
+
+    // Build update object
+    const updateFields = {};
+    if (name && name.trim()) {
+      updateFields.name = name.trim();
+    }
+    if (phone) {
+      updateFields.phone = phone;
+    }
+
+    console.log('Updating user with fields:', updateFields);
+
+    // Use findByIdAndUpdate to directly update
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    console.log('Update result:', updatedUser ? 'User found and updated' : 'User NOT found');
+
+    if (!updatedUser) {
+      return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
+
+    const responseData = {
+      success: true,
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+      },
+    };
+
+    console.log('Sending success response:', responseData);
+    res.status(200).json(responseData);
   } catch (error) {
+    console.error('Update profile error:', error);
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is already registered with another account',
+      });
+    }
     res.status(500).json({
       success: false,
       message: error.message,
@@ -522,6 +568,34 @@ exports.forgotPassword = async (req, res) => {
     }
   } catch (error) {
     console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update FCM token for push notifications
+// @route   PUT /api/auth/fcm-token
+// @access  Private
+exports.updateFCMToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+
+    if (!fcmToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'FCM token is required',
+      });
+    }
+
+    await User.findByIdAndUpdate(req.user._id, { fcmToken });
+
+    res.status(200).json({
+      success: true,
+      message: 'FCM token updated successfully',
+    });
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message,

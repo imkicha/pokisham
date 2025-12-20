@@ -11,6 +11,9 @@ const {
   cancelOrder,
   getDashboardStats,
   generateOrderInvoice,
+  getNotificationTemplates,
+  sendOrderNotification,
+  shareInvoice,
 } = require('../controllers/orderController');
 const {
   assignOrderToTenant,
@@ -25,6 +28,7 @@ router.post('/verify-payment', protect, verifyPayment);
 router.route('/').post(protect, createOrder).get(protect, isAdminOrSuperAdmin, getAllOrders);
 router.get('/myorders', protect, getMyOrders);
 router.get('/admin/stats', protect, isAdminOrSuperAdmin, getDashboardStats);
+router.get('/notification-templates', protect, isAdminOrSuperAdmin, getNotificationTemplates);
 
 // Tenant order routes
 router.get('/my-orders', protect, getTenantOrders); // Tenant gets their assigned orders
@@ -37,6 +41,8 @@ router.put('/:id/status', protect, isAdminOrSuperAdmin, updateOrderStatus); // A
 router.put('/:id/cancel', protect, cancelOrder);
 
 router.get('/:id/invoice', protect, generateOrderInvoice);
+router.post('/:id/share-invoice', protect, isAdminOrSuperAdmin, shareInvoice);
+router.post('/:id/notify', protect, isAdminOrSuperAdmin, sendOrderNotification);
 router.get('/:id', protect, getOrderById);
 
 module.exports = router;

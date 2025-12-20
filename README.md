@@ -1,6 +1,6 @@
 # 🎁 Pokisham - E-Commerce Platform
 
-A modern, secure, and mobile-responsive e-commerce web application for selling handcrafted Gifts, Custom Frames, Pottery Items, and Kolu Bommai collections with a beautiful South-Indian inspired design theme.
+A modern, secure, and mobile-responsive e-commerce web application for selling handcrafted Gifts, Custom Frames, Pottery Items, and Golu Bommai collections with a beautiful South-Indian inspired design theme.
 
 [![Security: Helmet](https://img.shields.io/badge/Security-Helmet-green)](https://helmetjs.github.io/)
 [![Authentication: JWT](https://img.shields.io/badge/Auth-JWT-blue)](https://jwt.io/)
@@ -13,7 +13,7 @@ A modern, secure, and mobile-responsive e-commerce web application for selling h
 
 ### User Features
 - 🛍️ **Shopping Experience**
-  - Browse products by categories (Gifts, Custom Frames, Pottery, Kolu Bommai)
+  - Browse products by categories (Gifts, Custom Frames, Pottery, Golu Bommai)
   - Advanced search and filtering
   - Product details with image galleries
   - Add products to cart and wishlist
@@ -76,7 +76,9 @@ A modern, secure, and mobile-responsive e-commerce web application for selling h
 - ✅ Request size limits
 - ✅ HTTP Parameter Pollution prevention
 
-**[📖 Read Full Security Documentation](SECURITY.md)**
+**Documentation:**
+- **[📖 Security Guide](SECURITY.md)** - Complete security documentation
+- **[🏪 Tenant Workflow Guide](TENANT_WORKFLOW.md)** - Category & product management for tenants
 
 ## Technology Stack
 

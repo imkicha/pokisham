@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiEye, FiSend, FiFilter, FiSearch } from 'react-icons/fi';
+import { FiEye, FiSend, FiFilter, FiSearch, FiX, FiDownload, FiMail, FiMessageCircle } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const SuperAdminOrders = () => {
@@ -14,6 +14,10 @@ const SuperAdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [assignModal, setAssignModal] = useState({ show: false, orderId: null });
   const [selectedTenant, setSelectedTenant] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [sharingInvoice, setSharingInvoice] = useState(false);
 
   useEffect(() => {
     document.title = 'Manage Orders - Super Admin - Pokisham';
@@ -131,6 +135,99 @@ const SuperAdminOrders = () => {
   const getTenantName = (tenantId) => {
     const tenant = tenants.find(t => t._id === tenantId);
     return tenant ? tenant.businessName : 'Platform';
+  };
+
+  // View order details
+  const handleViewOrder = async (orderId) => {
+    try {
+      const { data } = await API.get(`/orders/${orderId}`);
+      if (data.success) {
+        setSelectedOrder(data.order);
+        setTrackingNumber('');
+      }
+    } catch (error) {
+      toast.error('Failed to load order details');
+    }
+  };
+
+  // Update order status
+  const handleStatusUpdate = async (orderId, status) => {
+    try {
+      const { data } = await API.put(`/orders/${orderId}/status`, { status });
+      if (data.success) {
+        toast.success('Order status updated successfully');
+        setSelectedOrder(data.order);
+        fetchData();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update order status');
+    }
+  };
+
+  // Send notification
+  const handleSendNotification = async (orderId, type) => {
+    setSendingNotification(true);
+    try {
+      const { data } = await API.post(`/orders/${orderId}/notify`, {
+        type,
+        trackingNumber: trackingNumber || undefined,
+      });
+
+      if (data.success) {
+        if (data.results.email?.success) {
+          toast.success('Email sent successfully!');
+        } else if (data.results.email?.error) {
+          toast.error(`Email failed: ${data.results.email.error}`);
+        }
+
+        if (data.results.whatsapp?.success) {
+          window.open(data.results.whatsapp.url, '_blank');
+          toast.success('WhatsApp opened - send the message!');
+        } else if (data.results.whatsapp?.error) {
+          toast.error(`WhatsApp failed: ${data.results.whatsapp.error}`);
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send notification');
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  // Download invoice
+  const handleDownloadInvoice = async (orderId, orderNumber) => {
+    try {
+      const response = await API.get(`/orders/${orderId}/invoice`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoice-${orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Invoice downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download invoice');
+    }
+  };
+
+  // Share invoice via WhatsApp (uploads PDF to Cloudinary)
+  const handleShareInvoice = async (orderId) => {
+    setSharingInvoice(true);
+    try {
+      const { data } = await API.post(`/orders/${orderId}/share-invoice`);
+      if (data.success) {
+        window.open(data.whatsappUrl, '_blank');
+        toast.success('WhatsApp opened with invoice link!');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to share invoice');
+    } finally {
+      setSharingInvoice(false);
+    }
   };
 
   const filteredOrders = orders.filter(order => {
@@ -316,13 +413,13 @@ const SuperAdminOrders = () => {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex gap-2">
-                          <Link
-                            to={`/orders/${order._id}`}
+                          <button
+                            onClick={() => handleViewOrder(order._id)}
                             className="text-blue-600 hover:text-blue-800"
                             title="View Details"
                           >
                             <FiEye className="w-5 h-5" />
-                          </Link>
+                          </button>
                           {!order.routedToTenant && (
                             <button
                               onClick={() => handleShowAssignModal(order._id)}
@@ -395,6 +492,179 @@ const SuperAdminOrders = () => {
                 >
                   Assign Order
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Order Details Modal */}
+        {selectedOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Order #{selectedOrder.orderNumber || selectedOrder._id.slice(-8)}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {new Date(selectedOrder.createdAt).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedOrder(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <FiX className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Customer Info */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Customer Information</h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 font-medium">{selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name}</p>
+                      <p className="text-gray-600">{selectedOrder.user?.email}</p>
+                      <p className="text-gray-600">{selectedOrder.shippingAddress?.phone}</p>
+                    </div>
+                  </div>
+
+                  {/* Shipping Address */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Shipping Address</h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700">{selectedOrder.shippingAddress?.address}</p>
+                      <p className="text-gray-700">
+                        {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} - {selectedOrder.shippingAddress?.pincode}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Order Items</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      {selectedOrder.orderItems?.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center pb-3 border-b last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{item.name}</p>
+                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                            {item.variant?.size && (
+                              <p className="text-sm text-gray-600">Size: {item.variant.size}</p>
+                            )}
+                          </div>
+                          <p className="font-medium text-gray-900">₹{item.price * item.quantity}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Update Status */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Update Status</h3>
+                    <select
+                      value={selectedOrder.orderStatus}
+                      onChange={(e) => handleStatusUpdate(selectedOrder._id, e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  {/* Tracking Number (for Shipped status) */}
+                  {selectedOrder.orderStatus === 'Shipped' && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Tracking Number (Optional)</h3>
+                      <input
+                        type="text"
+                        value={trackingNumber}
+                        onChange={(e) => setTrackingNumber(e.target.value)}
+                        placeholder="Enter tracking number"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {/* Send Notification */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <FiSend className="text-primary-600" />
+                      Send Status Notification
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Notify customer about order status: <span className="font-semibold text-primary-600">{selectedOrder.orderStatus}</span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleSendNotification(selectedOrder._id, 'email')}
+                        disabled={sendingNotification}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <FiMail /> Email
+                      </button>
+                      <button
+                        onClick={() => handleSendNotification(selectedOrder._id, 'whatsapp')}
+                        disabled={sendingNotification}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <FaWhatsapp /> WhatsApp
+                      </button>
+                      <button
+                        onClick={() => handleSendNotification(selectedOrder._id, 'both')}
+                        disabled={sendingNotification}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <FiMessageCircle /> Both
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Order Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span>₹{selectedOrder.itemsPrice}</span>
+                    </div>
+                    {selectedOrder.shippingPrice > 0 && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Shipping</span>
+                        <span>₹{selectedOrder.shippingPrice}</span>
+                      </div>
+                    )}
+                    {selectedOrder.giftWrapPrice > 0 && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Gift Wrap</span>
+                        <span>₹{selectedOrder.giftWrapPrice}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                      <span>Total</span>
+                      <span className="text-primary-600">₹{selectedOrder.totalPrice}</span>
+                    </div>
+                  </div>
+
+                  {/* Download Invoice & Share */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleDownloadInvoice(selectedOrder._id, selectedOrder.orderNumber)}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+                    >
+                      <FiDownload /> Download
+                    </button>
+                    <button
+                      onClick={() => handleShareInvoice(selectedOrder._id)}
+                      disabled={sharingInvoice}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                    >
+                      <FaWhatsapp /> {sharingInvoice ? 'Uploading...' : 'Share PDF'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

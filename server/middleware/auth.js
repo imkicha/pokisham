@@ -94,3 +94,29 @@ exports.canManageProducts = (req, res, next) => {
   }
   next();
 };
+
+// Optional authentication - adds user to request if token exists, but doesn't require it
+exports.optionalAuth = async (req, res, next) => {
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  // If no token, continue without user
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id);
+  } catch (error) {
+    // If token is invalid, just continue without user (don't throw error)
+    console.log('Invalid token in optional auth, continuing without user');
+  }
+
+  next();
+};

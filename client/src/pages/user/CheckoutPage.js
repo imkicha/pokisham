@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
+import packingImage from '../../assets/images/pokisham_packing-removebg-preview.png';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -197,43 +198,45 @@ const CheckoutPage = () => {
           ))}
         </div>
 
-        <div className="text-center max-w-md w-full relative z-10">
+        <div className="text-center max-w-lg w-full relative z-10">
 
-          <div className="relative mb-6 md:mb-8">
-            <div className="absolute inset-0 animate-ping">
-              <FiCheckCircle className="w-20 h-20 md:w-32 md:h-32 text-white opacity-75 mx-auto" />
-            </div>
-            <FiCheckCircle className="w-20 h-20 md:w-32 md:h-32 text-white mx-auto relative animate-bounce drop-shadow-2xl" />
-
-            {/* Sparkle effects */}
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <div className="w-3 h-3 bg-yellow-300 rounded-full animate-ping" style={{animationDuration: '0.8s'}}></div>
-            </div>
-            <div className="absolute top-1/2 -left-4">
-              <div className="w-2 h-2 bg-white rounded-full animate-ping" style={{animationDuration: '1.2s', animationDelay: '0.2s'}}></div>
-            </div>
-            <div className="absolute top-1/2 -right-4">
-              <div className="w-2 h-2 bg-yellow-200 rounded-full animate-ping" style={{animationDuration: '1s', animationDelay: '0.4s'}}></div>
-            </div>
+          {/* Packing Illustration */}
+          <div className="mb-4 md:mb-6 animate-fade-in">
+            <img
+              src={packingImage}
+              alt="Your gift is being packed"
+              className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mx-auto object-contain drop-shadow-2xl"
+            />
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-display font-bold text-white mb-3 md:mb-4 animate-fade-in drop-shadow-lg">
-            Order Placed Successfully!
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-3 md:mb-4">
+            <FiCheckCircle className="w-8 h-8 md:w-10 md:h-10 text-white animate-bounce" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-white animate-fade-in drop-shadow-lg">
+              Order Placed Successfully!
+            </h1>
+          </div>
 
-          <p className="text-lg md:text-xl text-white mb-2 animate-fade-in-delay drop-shadow-md">
-            Thank you for shopping with
+          <p className="text-base sm:text-lg md:text-xl text-white mb-2 animate-fade-in-delay drop-shadow-md">
+            Your gift is being carefully packed with love
           </p>
-          <p className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8 animate-fade-in-delay drop-shadow-md flex items-center justify-center gap-2">
-            <span>🎀</span> Pokisham <span>🎀</span>
+          <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8 animate-fade-in-delay drop-shadow-md">
+            Thank you for shopping with Pokisham
           </p>
 
-          <button
-            onClick={() => navigate('/')}
-            className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 animate-scale-in"
-          >
-            Go to Home
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => navigate(`/orders/${orderId}`)}
+              className="bg-white text-purple-600 px-6 py-3 rounded-full font-semibold text-base sm:text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 animate-scale-in"
+            >
+              Track Order
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-white/20 text-white border-2 border-white px-6 py-3 rounded-full font-semibold text-base sm:text-lg shadow-xl hover:bg-white/30 transform hover:scale-105 transition-all duration-300 animate-scale-in"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
 
       </div>

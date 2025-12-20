@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FiEye, FiEyeOff, FiMail, FiLock, FiUser, FiPhone, FiShoppingBag, FiTruck, FiGift, FiStar, FiShield } from 'react-icons/fi';
@@ -17,6 +17,7 @@ const Register = () => {
     confirmPassword: '',
     phone: '',
   });
+  const [errors, setErrors] = useState({});
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -25,17 +26,144 @@ const Register = () => {
     document.title = step === 'register' ? 'Register - Pokisham' : 'Verify OTP - Pokisham';
   }, [step]);
 
+  // Validation functions
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const digitsOnly = phone.replace(/\D/g, '');
+    return digitsOnly.length === 10;
+  };
+
+  const validateName = (name) => {
+    // Name should be at least 2 characters and contain only letters and spaces
+    const nameRegex = /^[A-Za-z\s]{2,}$/;
+    return nameRegex.test(name.trim());
+  };
+
+  const validatePassword = (password) => {
+    return password.length >= 6;
+  };
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    let newValue = value;
+    let newErrors = { ...errors };
+
+    // Handle phone input - only allow digits and limit to 10
+    if (name === 'phone') {
+      newValue = value.replace(/\D/g, '').slice(0, 10);
+      if (newValue.length > 0 && newValue.length !== 10) {
+        newErrors.phone = 'Phone number must be exactly 10 digits';
+      } else if (newValue.length === 10) {
+        delete newErrors.phone;
+      }
+    }
+
+    // Handle first name validation
+    if (name === 'firstName') {
+      if (value && !validateName(value)) {
+        newErrors.firstName = 'First name should only contain letters';
+      } else {
+        delete newErrors.firstName;
+      }
+    }
+
+    // Handle last name validation
+    if (name === 'lastName') {
+      if (value && !validateName(value)) {
+        newErrors.lastName = 'Last name should only contain letters';
+      } else {
+        delete newErrors.lastName;
+      }
+    }
+
+    // Handle email validation
+    if (name === 'email') {
+      if (value && !validateEmail(value)) {
+        newErrors.email = 'Please enter a valid email address';
+      } else {
+        delete newErrors.email;
+      }
+    }
+
+    // Handle password validation
+    if (name === 'password') {
+      if (value && !validatePassword(value)) {
+        newErrors.password = 'Password must be at least 6 characters';
+      } else {
+        delete newErrors.password;
+      }
+      // Also check confirm password match
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      } else if (formData.confirmPassword) {
+        delete newErrors.confirmPassword;
+      }
+    }
+
+    // Handle confirm password validation
+    if (name === 'confirmPassword') {
+      if (value && value !== formData.password) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      } else {
+        delete newErrors.confirmPassword;
+      }
+    }
+
+    setErrors(newErrors);
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: newValue,
     });
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    // Validate all fields before submission
+    let validationErrors = {};
+
+    if (!formData.firstName.trim()) {
+      validationErrors.firstName = 'First name is required';
+    } else if (!validateName(formData.firstName)) {
+      validationErrors.firstName = 'First name should only contain letters';
+    }
+
+    if (!formData.lastName.trim()) {
+      validationErrors.lastName = 'Last name is required';
+    } else if (!validateName(formData.lastName)) {
+      validationErrors.lastName = 'Last name should only contain letters';
+    }
+
+    if (!formData.email.trim()) {
+      validationErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      validationErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.phone) {
+      validationErrors.phone = 'Phone number is required';
+    } else if (!validatePhone(formData.phone)) {
+      validationErrors.phone = 'Phone number must be exactly 10 digits';
+    }
+
+    if (!formData.password) {
+      validationErrors.password = 'Password is required';
+    } else if (!validatePassword(formData.password)) {
+      validationErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      validationErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      validationErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
@@ -320,12 +448,17 @@ const Register = () => {
                       name="firstName"
                       type="text"
                       required
-                      className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className={`block w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                        errors.firstName ? 'border-red-500' : 'border-gray-300'
+                      }`}
                       placeholder="First name"
                       value={formData.firstName}
                       onChange={handleChange}
                     />
                   </div>
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -336,11 +469,16 @@ const Register = () => {
                     name="lastName"
                     type="text"
                     required
-                    className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className={`block w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.lastName ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Last name"
                     value={formData.lastName}
                     onChange={handleChange}
                   />
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+                  )}
                 </div>
               </div>
 
@@ -359,12 +497,17 @@ const Register = () => {
                     type="email"
                     autoComplete="email"
                     required
-                    className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className={`block w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.email ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleChange}
                   />
                 </div>
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                )}
               </div>
 
               {/* Phone Field */}
@@ -381,12 +524,18 @@ const Register = () => {
                     name="phone"
                     type="tel"
                     required
-                    className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter phone number"
+                    maxLength={10}
+                    className={`block w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.phone ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter 10 digit phone number"
                     value={formData.phone}
                     onChange={handleChange}
                   />
                 </div>
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
+                )}
               </div>
 
               {/* Password Field */}
@@ -404,8 +553,10 @@ const Register = () => {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Create password"
+                    className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                      errors.password ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Create password (min 6 characters)"
                     value={formData.password}
                     onChange={handleChange}
                   />
@@ -417,6 +568,9 @@ const Register = () => {
                     {showPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+                )}
               </div>
 
               {/* Confirm Password Field */}
@@ -435,9 +589,7 @@ const Register = () => {
                     autoComplete="new-password"
                     required
                     className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                      formData.confirmPassword && formData.password !== formData.confirmPassword
-                        ? 'border-red-500'
-                        : 'border-gray-300'
+                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Confirm password"
                     value={formData.confirmPassword}
@@ -451,15 +603,15 @@ const Register = () => {
                     {showConfirmPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
                   </button>
                 </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-500">Passwords do not match</p>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
                 )}
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || (formData.password !== formData.confirmPassword)}
+                disabled={loading || Object.keys(errors).length > 0}
                 className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02]"
               >
                 {loading ? (

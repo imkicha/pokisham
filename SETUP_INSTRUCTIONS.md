@@ -73,7 +73,7 @@ npm run data:import
 ```
 
 This will create:
-- 4 Categories (Gifts, Custom Frames, Pottery, Kolu Bommai)
+- 4 Categories (Gifts, Custom Frames, Pottery, Golu Bommai)
 - 5 Sample Products
 
 ### Step 4: Start the Backend

@@ -12,6 +12,7 @@ const {
   deleteAddress,
   forgotPassword,
   resetPassword,
+  updateFCMToken,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const {
@@ -32,6 +33,7 @@ router.post('/reset-password', passwordResetLimiter, resetPassword);
 // Protected routes
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/fcm-token', protect, updateFCMToken);
 router.post('/address', protect, addAddress);
 router.put('/address/:addressId', protect, updateAddress);
 router.delete('/address/:addressId', protect, deleteAddress);

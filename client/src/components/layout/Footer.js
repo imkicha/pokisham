@@ -10,7 +10,7 @@ const Footer = () => {
           <div className="animate-fade-in">
             <div className="flex items-center gap-3 mb-4">
               <img
-                src="/pokisham-logo.jpg"
+                src="/treasure-open-removebg-preview.png"
                 alt="Pokisham"
                 className="w-12 h-12 object-contain"
               />
@@ -18,7 +18,7 @@ const Footer = () => {
             </div>
             <p className="text-sm mb-4">
               Bringing you the finest collection of South Indian gifts, custom frames, pottery,
-              and traditional Kolu Bommai.
+              and traditional Golu Bommai.
             </p>
             <div className="flex gap-4">
               <a
@@ -105,10 +105,10 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  to="/products?category=kolu"
+                  to="/products?category=golu-bommai"
                   className="hover:text-primary-400 transition-all transform hover:translate-x-2 inline-block"
                 >
-                  Kolu Bommai
+                  Golu Bommai
                 </Link>
               </li>
             </ul>
@@ -120,7 +120,7 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
                 <FiMapPin className="w-5 h-5 mt-1 flex-shrink-0" />
-                <span className="text-sm">123 Main Street, madurai, Tamil Nadu 600001</span>
+                <span className="text-sm">105B D D main road arappalaym madurai-625016</span>
               </li>
               <li className="flex items-center gap-2">
                 <FiPhone className="w-5 h-5" />

@@ -18,7 +18,7 @@ const Header = () => {
     { name: 'Gifts', path: '/products?category=gifts' },
     { name: 'Custom Frames', path: '/products?category=custom-frames' },
     { name: 'Pottery', path: '/products?category=pottery' },
-    { name: 'Kolu Bommai', path: '/products?category=kolu-bommai' },
+    { name: 'Golu Bommai', path: '/products?category=kolu-bommai' },
   ];
 
   const handleLogout = () => {

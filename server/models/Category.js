@@ -5,7 +5,6 @@ const categorySchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'Please provide category name'],
-      unique: true,
       trim: true,
     },
     description: {
@@ -18,18 +17,32 @@ const categorySchema = new mongoose.Schema(
     },
     slug: {
       type: String,
-      unique: true,
       lowercase: true,
     },
     isActive: {
       type: Boolean,
       default: true,
     },
+    // Tenant support - null means global category (admin-created)
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound indexes to allow same category name for different tenants
+categorySchema.index({ name: 1, tenantId: 1 }, { unique: true });
+categorySchema.index({ slug: 1, tenantId: 1 }, { unique: true });
 
 // ✅ SAFE slug generation (no next)
 categorySchema.pre('save', async function () {

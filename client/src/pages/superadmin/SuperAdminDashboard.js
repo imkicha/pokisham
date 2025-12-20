@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiUsers, FiShoppingBag, FiDollarSign, FiTrendingUp, FiClock, FiCheck, FiX } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiDollarSign, FiTrendingUp, FiClock, FiCheck, FiX, FiMessageCircle } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const SuperAdminDashboard = () => {
@@ -281,6 +281,15 @@ const SuperAdminDashboard = () => {
               <FiTrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mb-2" />
               <h3 className="font-semibold text-sm sm:text-base">Commissions</h3>
               <p className="text-xs sm:text-sm opacity-90 mt-1">Track and manage commissions</p>
+            </Link>
+
+            <Link
+              to="/admin/messages"
+              className="bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 sm:p-6 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all shadow-md hover:shadow-lg"
+            >
+              <FiMessageCircle className="w-6 h-6 sm:w-8 sm:h-8 mb-2" />
+              <h3 className="font-semibold text-sm sm:text-base">Contact Messages</h3>
+              <p className="text-xs sm:text-sm opacity-90 mt-1">View customer inquiries</p>
             </Link>
           </div>
 

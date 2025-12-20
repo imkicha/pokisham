@@ -6,7 +6,6 @@ const connectDatabase = require('./config/database');
 const errorHandler = require('./middleware/error');
 const {
   setSecurityHeaders,
-  sanitizeData,
   preventHPP,
   additionalSecurityHeaders,
   validateRequestSize,
@@ -25,7 +24,23 @@ const app = express();
 // Trust proxy - important for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Security headers
+// CORS with security - MUST be first before other middleware
+app.use(
+  cors({
+    origin: [
+      "http://136.185.19.6",
+      "http://136.185.19.6:3000",
+      "http://localhost:3000"
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 600, // 10 minutes
+  })
+);
+
+// Security headers (after CORS)
 app.use(setSecurityHeaders());
 app.use(additionalSecurityHeaders);
 
@@ -38,25 +53,6 @@ app.use(validateRequestSize);
 
 // Cookie parser
 app.use(cookieParser());
-
-// CORS with security
-app.use(
-  cors({
-    origin: [
-      "http://136.185.19.6",
-      "http://136.185.19.6:3000",
-      "http://localhost:3000"
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 600, // 10 minutes
-  })
-);
-
-// Data sanitization against NoSQL injection
-app.use(sanitizeData());
 
 // Prevent HTTP Parameter Pollution
 app.use(preventHPP());
@@ -77,6 +73,8 @@ app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/tenants', require('./routes/tenantRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/contact', require('./routes/contactRoutes'));
 
 // Health check route
 app.get('/health', (req, res) => {
