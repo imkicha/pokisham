@@ -48,7 +48,7 @@ exports.sendContactReply = async (to, customerName, subject, message, originalMe
           </div>
 
           <div style="background: #333; padding: 20px; text-align: center;">
-            <p style="color: #999; margin: 0 0 10px 0; font-size: 12px;">© 2024 Pokisham. All rights reserved.</p>
+            <p style="color: #999; margin: 0 0 10px 0; font-size: 12px;">© 2026 Pokisham. All rights reserved.</p>
             <p style="color: #999; margin: 0; font-size: 12px;">
               <a href="https://pokisham.com" style="color: #ec5578; text-decoration: none;">Visit our website</a>
             </p>
@@ -204,8 +204,9 @@ exports.sendOrderConfirmation = async (to, customerName, order) => {
             <h3 style="color: #333; margin: 25px 0 15px 0; font-size: 18px;">Shipping Address</h3>
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px;">
               <p style="margin: 0; color: #333; line-height: 1.6;">
-                <strong>${order.shippingAddress.fullName}</strong><br>
-                ${order.shippingAddress.address}<br>
+                <strong>${order.shippingAddress.name || order.shippingAddress.fullName || ''}</strong><br>
+                ${order.shippingAddress.addressLine1 || order.shippingAddress.address || ''}<br>
+                ${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + '<br>' : ''}
                 ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}<br>
                 Phone: ${order.shippingAddress.phone}
               </p>
@@ -368,8 +369,9 @@ exports.sendOrderStatusEmail = async (to, customerName, order, status, trackingN
             <h3 style="color: #333; margin: 0 0 15px 0; font-size: 16px;">Delivery Address</h3>
             <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
               <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
-                ${order.shippingAddress.fullName}<br>
-                ${order.shippingAddress.address}<br>
+                ${order.shippingAddress.name || order.shippingAddress.fullName || ''}<br>
+                ${order.shippingAddress.addressLine1 || order.shippingAddress.address || ''}<br>
+                ${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + '<br>' : ''}
                 ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}
               </p>
             </div>
@@ -377,7 +379,7 @@ exports.sendOrderStatusEmail = async (to, customerName, order, status, trackingN
 
           <!-- CTA Button -->
           <div style="padding: 0 30px 30px; text-align: center;">
-            <a href="${process.env.CLIENT_URL || 'https://pokisham.com'}/orders/${order._id}"
+            <a href="https://www.pokisham.com/orders/${order._id}"
                style="display: inline-block; background: linear-gradient(135deg, #ec5578 0%, #f97316 100%); color: white; padding: 14px 40px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 16px;">
               View Order Details
             </a>

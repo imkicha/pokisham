@@ -650,7 +650,7 @@ exports.sendOrderNotification = async (req, res) => {
     if (type === 'whatsapp' || type === 'both') {
       const phone = customer?.phone || order.shippingAddress?.phone;
       if (phone) {
-        const message = getWhatsAppMessage(customer?.name || order.shippingAddress?.fullName, order, status, trackingNumber);
+        const message = getWhatsAppMessage(customer?.name || order.shippingAddress?.name || order.shippingAddress?.fullName, order, status, trackingNumber);
         if (message) {
           // Format phone number (remove +, spaces, etc.)
           const cleanPhone = phone.replace(/[^0-9]/g, '');
