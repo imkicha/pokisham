@@ -524,7 +524,7 @@ const SuperAdminOrders = () => {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Customer Information</h3>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-700 font-medium">{selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name}</p>
+                      <p className="text-gray-700 font-medium">{selectedOrder.shippingAddress?.name || selectedOrder.user?.name}</p>
                       <p className="text-gray-600">{selectedOrder.user?.email}</p>
                       <p className="text-gray-600">{selectedOrder.shippingAddress?.phone}</p>
                     </div>
@@ -534,7 +534,10 @@ const SuperAdminOrders = () => {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Shipping Address</h3>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-700">{selectedOrder.shippingAddress?.address}</p>
+                      <p className="text-gray-700">{selectedOrder.shippingAddress?.addressLine1}</p>
+                      {selectedOrder.shippingAddress?.addressLine2 && (
+                        <p className="text-gray-700">{selectedOrder.shippingAddress?.addressLine2}</p>
+                      )}
                       <p className="text-gray-700">
                         {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} - {selectedOrder.shippingAddress?.pincode}
                       </p>
