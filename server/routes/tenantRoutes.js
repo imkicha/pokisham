@@ -7,6 +7,7 @@ const {
   approveTenant,
   rejectTenant,
   suspendTenant,
+  reactivateTenant,
   updateTenant,
   getTenantStats,
   updateCommissionRate,
@@ -26,6 +27,7 @@ router.get('/:id/stats', protect, getTenantStats);
 router.put('/:id/approve', protect, isSuperAdmin, approveTenant);
 router.put('/:id/reject', protect, isSuperAdmin, rejectTenant);
 router.put('/:id/suspend', protect, isSuperAdmin, suspendTenant);
+router.put('/:id/reactivate', protect, isSuperAdmin, reactivateTenant);
 router.put('/:id/commission', protect, isSuperAdmin, updateCommissionRate);
 
 module.exports = router;

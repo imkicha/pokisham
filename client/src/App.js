@@ -39,6 +39,7 @@ import ContactMessages from './pages/admin/ContactMessages';
 import CategoriesManagement from './pages/admin/CategoriesManagement';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import TenantManagement from './pages/superadmin/TenantManagement';
+import TenantDetails from './pages/superadmin/TenantDetails';
 import SuperAdminProducts from './pages/superadmin/SuperAdminProducts';
 import SuperAdminOrders from './pages/superadmin/SuperAdminOrders';
 import SuperAdminCommissions from './pages/superadmin/SuperAdminCommissions';
@@ -284,6 +285,16 @@ function App() {
                 <ProtectedRoute superAdminOnly={true}>
                   <Layout>
                     <TenantManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/superadmin/tenants/:id"
+              element={
+                <ProtectedRoute superAdminOnly={true}>
+                  <Layout>
+                    <TenantDetails />
                   </Layout>
                 </ProtectedRoute>
               }

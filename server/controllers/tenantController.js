@@ -279,9 +279,52 @@ exports.suspendTenant = async (req, res) => {
     tenant.isActive = false;
     await tenant.save();
 
+    // Block user access by setting role back to 'user' and marking as not verified
+    await User.findByIdAndUpdate(tenant.userId, {
+      role: 'user',
+      isVerified: false
+    });
+
     res.status(200).json({
       success: true,
       message: 'Tenant suspended',
+      tenant,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Reactivate tenant (Super Admin)
+// @route   PUT /api/tenants/:id/reactivate
+// @access  Private/SuperAdmin
+exports.reactivateTenant = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant not found',
+      });
+    }
+
+    tenant.status = 'approved';
+    tenant.isActive = true;
+    await tenant.save();
+
+    // Restore user access
+    await User.findByIdAndUpdate(tenant.userId, {
+      role: 'tenant',
+      isVerified: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Tenant reactivated successfully',
       tenant,
     });
   } catch (error) {

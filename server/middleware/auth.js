@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Tenant = require('../models/Tenant');
 
 // Protect routes - verify JWT token
 exports.protect = async (req, res, next) => {
@@ -26,6 +27,14 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'User not found',
+      });
+    }
+
+    // Check if user is verified (skip for superadmin and admin)
+    if (!req.user.isVerified && !['admin', 'superadmin'].includes(req.user.role)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.',
       });
     }
 
@@ -62,14 +71,26 @@ exports.isSuperAdmin = (req, res, next) => {
   next();
 };
 
-// Check if user is tenant
-exports.isTenant = (req, res, next) => {
+// Check if user is tenant and tenant is active
+exports.isTenant = async (req, res, next) => {
   if (req.user.role !== 'tenant') {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Tenant only.',
     });
   }
+
+  // Check if tenant is active
+  if (req.user.tenantId) {
+    const tenant = await Tenant.findById(req.user.tenantId);
+    if (!tenant || tenant.status !== 'approved' || !tenant.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your seller account has been suspended. Please contact support.',
+      });
+    }
+  }
+
   next();
 };
 
