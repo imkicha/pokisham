@@ -648,7 +648,8 @@ exports.sendOrderNotification = async (req, res) => {
 
     // Generate WhatsApp message (opens WhatsApp Web/App)
     if (type === 'whatsapp' || type === 'both') {
-      const phone = customer?.phone || order.shippingAddress?.phone;
+      // Prioritize shipping address phone (what they entered at checkout)
+      const phone = order.shippingAddress?.phone || customer?.phone;
       if (phone) {
         const message = getWhatsAppMessage(customer?.name || order.shippingAddress?.name || order.shippingAddress?.fullName, order, status, trackingNumber);
         if (message) {
@@ -717,8 +718,8 @@ exports.shareInvoice = async (req, res) => {
       access_mode: 'public',
     });
 
-    // Get customer phone
-    const phone = order.user?.phone || order.shippingAddress?.phone || '';
+    // Get customer phone - prioritize shipping address phone (what they entered at checkout)
+    const phone = order.shippingAddress?.phone || order.user?.phone || '';
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const whatsappPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
 

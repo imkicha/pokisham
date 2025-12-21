@@ -134,7 +134,20 @@ export const CartProvider = ({ children }) => {
     return cart.items
       .filter((item) => item.product !== null) // Exclude deleted products
       .reduce((total, item) => {
-        const price = item.product?.discountPrice || item.product?.price || 0;
+        let price = 0;
+
+        // Check if item has a variant and product has variants
+        if (item.variant && item.product?.hasVariants && item.product?.variants) {
+          const variant = item.product.variants.find((v) => v.size === item.variant.size);
+          if (variant) {
+            price = variant.price;
+          } else {
+            price = item.product?.discountPrice || item.product?.price || 0;
+          }
+        } else {
+          price = item.product?.discountPrice || item.product?.price || 0;
+        }
+
         return total + price * item.quantity;
       }, 0);
   };
