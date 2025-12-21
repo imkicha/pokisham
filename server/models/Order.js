@@ -129,6 +129,10 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0.0,
     },
+    packingPrice: {
+      type: Number,
+      default: 0.0,
+    },
     discountPrice: {
       type: Number,
       default: 0.0,

@@ -60,8 +60,8 @@ const ContactPage = () => {
     {
       icon: <FiMail className="w-6 h-6" />,
       title: 'Email',
-      content: 'hello@pokisham.com',
-      link: 'mailto:hello@pokisham.com',
+      content: 'pokisham.info@gmail.com',
+      link: 'mailto:pokisham.info@gmail.com',
     },
     {
       icon: <FiClock className="w-6 h-6" />,
@@ -81,7 +81,7 @@ const ContactPage = () => {
     {
       icon: <FaInstagram className="w-6 h-6" />,
       name: 'Instagram',
-      link: 'https://instagram.com/pokisham',
+      link: 'https://www.instagram.com/pokisham.com_?utm_source=qr',
       color: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600',
     },
     {

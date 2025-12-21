@@ -131,8 +131,30 @@ const CartPage = () => {
 
   const subtotal = getCartTotal();
   const giftWrapFee = validItems.filter((item) => item.giftWrap).length * 50;
-  const shippingFee = subtotal >= 999 ? 0 : 100;
-  const total = subtotal + giftWrapFee + shippingFee;
+
+  // Calculate packing charges from products
+  const packingCharge = validItems.reduce((acc, item) => {
+    const productPackingCharge = item.product.packingCharge || 0;
+    return acc + (productPackingCharge * item.quantity);
+  }, 0);
+
+  // Check if any product has "to_pay" delivery type
+  const hasToPayDelivery = validItems.some((item) => {
+    const chargeType = item.product.deliveryChargeType || 'to_pay';
+    return chargeType === 'to_pay';
+  });
+
+  // Calculate fixed delivery charges (added to total)
+  const deliveryChargeFixed = validItems.reduce((acc, item) => {
+    const chargeType = item.product.deliveryChargeType || 'to_pay';
+    if (chargeType === 'fixed') {
+      const productDeliveryCharge = item.product.deliveryCharge || 0;
+      return acc + (productDeliveryCharge * item.quantity);
+    }
+    return acc;
+  }, 0);
+
+  const total = subtotal + giftWrapFee + packingCharge + deliveryChargeFixed;
 
   const breadcrumbs = [{ label: 'Shopping Cart' }];
 
@@ -350,6 +372,13 @@ const CartPage = () => {
                     <span>₹{subtotal}</span>
                   </div>
 
+                  {packingCharge > 0 && (
+                    <div className="flex justify-between text-sm sm:text-base text-gray-700">
+                      <span>Packing Charges</span>
+                      <span>₹{packingCharge}</span>
+                    </div>
+                  )}
+
                   {giftWrapFee > 0 && (
                     <div className="flex justify-between text-sm sm:text-base text-gray-700">
                       <span>Gift Wrap</span>
@@ -357,17 +386,28 @@ const CartPage = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-between text-sm sm:text-base text-gray-700">
-                    <span>Shipping</span>
-                    <span className={shippingFee === 0 ? 'text-green-600 font-semibold' : ''}>
-                      {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
-                    </span>
-                  </div>
+                  {deliveryChargeFixed > 0 && (
+                    <div className="flex justify-between text-sm sm:text-base text-gray-700">
+                      <span>Delivery Charge</span>
+                      <span className="text-green-600 font-medium">₹{deliveryChargeFixed}</span>
+                    </div>
+                  )}
 
-                  {subtotal < 999 && (
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      Add ₹{999 - subtotal} more for free shipping
-                    </p>
+                  {hasToPayDelivery && (
+                    <>
+                      <div className="flex justify-between text-sm sm:text-base text-gray-500">
+                        <span>Delivery</span>
+                        <span className="text-orange-600 font-medium">To Pay</span>
+                      </div>
+                      <p className="text-xs text-orange-500">*Delivery charge to be paid on arrival</p>
+                    </>
+                  )}
+
+                  {deliveryChargeFixed === 0 && !hasToPayDelivery && (
+                    <div className="flex justify-between text-sm sm:text-base text-gray-700">
+                      <span>Delivery</span>
+                      <span className="text-green-600 font-medium">Free</span>
+                    </div>
                   )}
                 </div>
 

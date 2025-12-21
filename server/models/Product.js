@@ -97,6 +97,19 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    packingCharge: {
+      type: Number,
+      default: 0,
+    },
+    deliveryCharge: {
+      type: Number,
+      default: 0,
+    },
+    deliveryChargeType: {
+      type: String,
+      enum: ['to_pay', 'fixed'],
+      default: 'to_pay',
+    },
     requiresCustomPhoto: {
       type: Boolean,
       default: false,

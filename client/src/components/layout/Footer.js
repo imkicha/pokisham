@@ -30,7 +30,7 @@ const Footer = () => {
                 <FiFacebook className="w-5 h-5" />
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/pokisham.com_?utm_source=qr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 bg-gray-800 rounded-full hover:bg-gradient-to-r hover:from-pink-600 hover:to-purple-600 transition-all transform hover:scale-110 hover:rotate-12"
@@ -128,7 +128,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <FiMail className="w-5 h-5" />
-                <span className="text-sm">hello@pokisham.com</span>
+                <span className="text-sm">pokisham.info@gmail.com</span>
               </li>
             </ul>
           </div>

@@ -588,7 +588,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📞 Support & Contact
 
-- 📧 **Email**: hello@pokisham.com
+- 📧 **Email**: pokisham.info@gmail.com
 - 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/pokisham/issues)
 - 📚 **Documentation**: [SECURITY.md](SECURITY.md)
 - 💬 **Discussions**: For questions and community support

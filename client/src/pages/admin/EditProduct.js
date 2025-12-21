@@ -15,6 +15,10 @@ const EditProduct = () => {
     description: '',
     price: '',
     discountPrice: '',
+    hasPackingCharge: false,
+    packingCharge: '',
+    deliveryCharge: '',
+    deliveryChargeType: 'to_pay',
     stock: '',
     category: '',
     sku: '',
@@ -54,6 +58,10 @@ const EditProduct = () => {
           description: product.description,
           price: product.price,
           discountPrice: product.discountPrice || '',
+          hasPackingCharge: product.packingCharge > 0,
+          packingCharge: product.packingCharge || '',
+          deliveryCharge: product.deliveryCharge || '',
+          deliveryChargeType: product.deliveryChargeType || 'to_pay',
           stock: product.stock,
           category: product.category?._id || '',
           sku: product.sku,
@@ -123,7 +131,16 @@ const EditProduct = () => {
     const formDataToSend = new FormData();
 
     Object.keys(formData).forEach((key) => {
-      formDataToSend.append(key, formData[key]);
+      // Handle packing and delivery charges with toggle logic
+      if (key === 'packingCharge') {
+        formDataToSend.append(key, formData.hasPackingCharge && formData.packingCharge ? Number(formData.packingCharge) : 0);
+      } else if (key === 'deliveryCharge') {
+        formDataToSend.append(key, formData.deliveryChargeType === 'fixed' && formData.deliveryCharge ? Number(formData.deliveryCharge) : 0);
+      } else if (key === 'deliveryChargeType') {
+        formDataToSend.append(key, formData.deliveryChargeType);
+      } else if (key !== 'hasPackingCharge') {
+        formDataToSend.append(key, formData[key]);
+      }
     });
 
     formDataToSend.append('hasVariants', hasVariants);
@@ -258,6 +275,85 @@ const EditProduct = () => {
                 step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
               />
+            </div>
+          </div>
+
+          {/* Packing & Delivery Charges */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <label className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  name="hasPackingCharge"
+                  checked={formData.hasPackingCharge}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">Enable Packing Charge</span>
+              </label>
+              {formData.hasPackingCharge && (
+                <div>
+                  <input
+                    type="number"
+                    name="packingCharge"
+                    value={formData.packingCharge}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter amount"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Added to order total</p>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Delivery Charge</label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="deliveryChargeType"
+                    value="to_pay"
+                    checked={formData.deliveryChargeType === 'to_pay'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">To Pay</span>
+                    <p className="text-xs text-orange-500">Customer pays delivery on arrival</p>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 p-2 border rounded-md cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="deliveryChargeType"
+                    value="fixed"
+                    checked={formData.deliveryChargeType === 'fixed'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Fixed Amount</span>
+                    <p className="text-xs text-green-600">Add to order total at checkout</p>
+                  </div>
+                </label>
+              </div>
+              {formData.deliveryChargeType === 'fixed' && (
+                <div className="mt-3">
+                  <label className="block text-xs text-gray-600 mb-1">Amount (₹)</label>
+                  <input
+                    type="number"
+                    name="deliveryCharge"
+                    value={formData.deliveryCharge}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter delivery amount"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

@@ -34,7 +34,7 @@ const Header = () => {
           <p className="animate-fade-in">Free shipping on orders above ₹999</p>
           <div className="hidden md:flex gap-4 animate-fade-in-delay">
             <span>+91 8682821273</span>
-            <span>hello@pokisham.com</span>
+            <span>pokisham.info@gmail.com</span>
           </div>
         </div>
       </div>

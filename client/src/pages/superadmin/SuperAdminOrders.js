@@ -633,16 +633,28 @@ const SuperAdminOrders = () => {
                       <span className="text-gray-600">Subtotal</span>
                       <span>₹{selectedOrder.itemsPrice}</span>
                     </div>
-                    {selectedOrder.shippingPrice > 0 && (
+                    {(selectedOrder.packingPrice > 0 || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0)) > 0) && (
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Shipping</span>
-                        <span>₹{selectedOrder.shippingPrice}</span>
+                        <span className="text-gray-600">Packing Charges</span>
+                        <span>₹{selectedOrder.packingPrice || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0))}</span>
                       </div>
                     )}
                     {selectedOrder.giftWrapPrice > 0 && (
                       <div className="flex justify-between mb-2">
                         <span className="text-gray-600">Gift Wrap</span>
                         <span>₹{selectedOrder.giftWrapPrice}</span>
+                      </div>
+                    )}
+                    {selectedOrder.shippingPrice > 0 && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Delivery Charge</span>
+                        <span className="text-green-600">₹{selectedOrder.shippingPrice}</span>
+                      </div>
+                    )}
+                    {selectedOrder.shippingPrice === 0 && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Delivery</span>
+                        <span className="text-orange-600 font-medium">To Pay</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">

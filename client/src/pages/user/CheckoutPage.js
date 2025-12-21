@@ -77,8 +77,32 @@ const CheckoutPage = () => {
 
   const subtotal = getCartTotal();
   const giftWrapFee = cart?.items?.filter((item) => item.giftWrap).length * 50 || 0;
-  const shippingFee = subtotal >= 999 ? 0 : 100;
-  const total = subtotal + giftWrapFee + shippingFee;
+
+  // Calculate packing charges from products
+  const packingCharge = cart?.items?.reduce((acc, item) => {
+    const productPackingCharge = item.product.packingCharge || 0;
+    return acc + (productPackingCharge * item.quantity);
+  }, 0) || 0;
+
+  // Check if any product has "to_pay" delivery type
+  const hasToPayDelivery = cart?.items?.some((item) => {
+    const chargeType = item.product.deliveryChargeType || 'to_pay';
+    return chargeType === 'to_pay';
+  }) || false;
+
+  // Calculate fixed delivery charges (added to total)
+  const deliveryChargeFixed = cart?.items?.reduce((acc, item) => {
+    const chargeType = item.product.deliveryChargeType || 'to_pay';
+    if (chargeType === 'fixed') {
+      const productDeliveryCharge = item.product.deliveryCharge || 0;
+      return acc + (productDeliveryCharge * item.quantity);
+    }
+    return acc;
+  }, 0) || 0;
+
+  // Fixed delivery charge is added to total, "to_pay" is just an indicator
+  const shippingFee = deliveryChargeFixed;
+  const total = subtotal + giftWrapFee + packingCharge + deliveryChargeFixed;
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
@@ -109,6 +133,7 @@ const CheckoutPage = () => {
         paymentInfo: { status: 'pending' },
         itemsPrice: subtotal,
         giftWrapPrice: giftWrapFee,
+        packingPrice: packingCharge,
         shippingPrice: shippingFee,
         totalPrice: total,
         taxPrice: 0,
@@ -378,14 +403,37 @@ const CheckoutPage = () => {
               <div className="space-y-3 mb-4 pb-4 border-b">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
 
+                {packingCharge > 0 && (
+                  <div className="flex justify-between"><span>Packing Charges</span><span>₹{packingCharge}</span></div>
+                )}
+
                 {giftWrapFee > 0 && (
                   <div className="flex justify-between"><span>Gift Wrap</span><span>₹{giftWrapFee}</span></div>
                 )}
 
-                <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>{shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}</span>
-                </div>
+                {deliveryChargeFixed > 0 && (
+                  <div className="flex justify-between">
+                    <span>Delivery Charge</span>
+                    <span className="text-sm font-medium text-green-600">₹{deliveryChargeFixed}</span>
+                  </div>
+                )}
+
+                {hasToPayDelivery && (
+                  <>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Delivery</span>
+                      <span className="text-sm font-medium text-orange-600">To Pay</span>
+                    </div>
+                    <p className="text-xs text-orange-500">*Delivery charge to be paid on arrival</p>
+                  </>
+                )}
+
+                {deliveryChargeFixed === 0 && !hasToPayDelivery && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Delivery</span>
+                    <span className="text-sm font-medium text-green-600">Free</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between text-lg font-bold mb-6">

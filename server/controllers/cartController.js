@@ -10,7 +10,7 @@ exports.getCart = async (req, res) => {
   try {
     let cart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     if (!cart) {
@@ -27,7 +27,7 @@ exports.getCart = async (req, res) => {
       // Re-fetch to get clean data
       cart = await Cart.findOne({ user: req.user._id }).populate({
         path: 'items.product',
-        select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+        select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
       });
     }
 
@@ -90,7 +90,7 @@ exports.addToCart = async (req, res) => {
 
     cart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     res.status(200).json({
@@ -141,7 +141,7 @@ exports.updateCartItem = async (req, res) => {
 
     const updatedCart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     res.status(200).json({
@@ -178,7 +178,7 @@ exports.removeFromCart = async (req, res) => {
 
     const updatedCart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     res.status(200).json({
@@ -284,7 +284,7 @@ exports.uploadCustomPhoto = async (req, res) => {
 
     const updatedCart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     res.status(200).json({
@@ -348,7 +348,7 @@ exports.removeCustomPhoto = async (req, res) => {
 
     const updatedCart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',
-      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto',
+      select: 'name price discountPrice images stock hasVariants variants giftWrapAvailable requiresCustomPhoto packingCharge deliveryCharge deliveryChargeType',
     });
 
     res.status(200).json({

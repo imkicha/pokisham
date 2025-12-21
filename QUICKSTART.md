@@ -267,7 +267,7 @@ After logging in:
    - Review browser console for frontend errors
 
 3. **Support**
-   - 📧 Email: hello@pokisham.com
+   - 📧 Email: pokisham.info@gmail.com
    - 🐛 Issues: GitHub Issues
    - 💬 Discussions: Community support
 
