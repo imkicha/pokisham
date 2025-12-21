@@ -212,8 +212,11 @@ exports.approveTenant = async (req, res) => {
     tenant.status = 'approved';
     await tenant.save();
 
-    // Update user role to tenant
-    await User.findByIdAndUpdate(tenant.userId, { role: 'tenant' });
+    // Update user role to tenant and set isVerified to true
+    await User.findByIdAndUpdate(tenant.userId, {
+      role: 'tenant',
+      isVerified: true
+    });
 
     res.status(200).json({
       success: true,

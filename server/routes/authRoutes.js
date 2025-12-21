@@ -13,8 +13,10 @@ const {
   forgotPassword,
   resetPassword,
   updateFCMToken,
+  getAllUsers,
+  deleteUser,
 } = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
+const { protect, isAdminOrSuperAdmin } = require('../middleware/auth');
 const {
   authLimiter,
   otpLimiter,
@@ -37,5 +39,9 @@ router.put('/fcm-token', protect, updateFCMToken);
 router.post('/address', protect, addAddress);
 router.put('/address/:addressId', protect, updateAddress);
 router.delete('/address/:addressId', protect, deleteAddress);
+
+// Admin routes
+router.get('/users', protect, isAdminOrSuperAdmin, getAllUsers);
+router.delete('/users/:id', protect, isAdminOrSuperAdmin, deleteUser);
 
 module.exports = router;

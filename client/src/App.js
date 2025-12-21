@@ -34,6 +34,7 @@ import ProductsManagement from './pages/admin/ProductsManagement';
 import AddProduct from './pages/admin/AddProduct';
 import EditProduct from './pages/admin/EditProduct';
 import OrdersManagement from './pages/admin/OrdersManagement';
+import UsersManagement from './pages/admin/UsersManagement';
 import ContactMessages from './pages/admin/ContactMessages';
 import CategoriesManagement from './pages/admin/CategoriesManagement';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
@@ -427,6 +428,16 @@ function App() {
                 <ProtectedRoute adminOnly={true}>
                   <Layout>
                     <OrdersManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <UsersManagement />
                   </Layout>
                 </ProtectedRoute>
               }
