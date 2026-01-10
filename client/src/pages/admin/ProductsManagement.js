@@ -59,112 +59,217 @@ const ProductsManagement = () => {
         dashboardType="admin"
         items={[{ label: 'Products' }]}
       />
-      <div className="container-custom py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-display font-bold text-gray-900">Products Management</h1>
-        <Link to="/admin/products/add" className="btn-primary flex items-center gap-2">
-          <FiPlus /> Add New Product
-        </Link>
-      </div>
+      <div className="container-custom py-4 sm:py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-display font-bold text-gray-900">Products Management</h1>
+          <Link to="/admin/products/add" className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto">
+            <FiPlus /> Add New Product
+          </Link>
+        </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Product
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Price
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                  No products found. Add your first product!
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product._id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <img
-                        className="h-10 w-10 rounded object-cover"
-                        src={product.images[0]?.url || 'https://via.placeholder.com/40'}
-                        alt={product.name}
-                      />
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        <div className="text-sm text-gray-500">{product.sku}</div>
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="hidden md:block bg-white rounded-lg shadow-md">
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[300px]">
+                    Product
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">
+                    Category
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[100px]">
+                    Price
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">
+                    Stock
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[100px]">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[120px]">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {products.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      No products found. Add your first product!
+                    </td>
+                  </tr>
+                ) : (
+                  products.map((product) => (
+                    <tr key={product._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <img
+                            className="h-12 w-12 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                            src={product.images[0]?.url || 'https://via.placeholder.com/48'}
+                            alt={product.name}
+                          />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={product.name}>
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-gray-500">{product.sku}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                          {product.category?.name || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-semibold text-gray-900">₹{product.price}</div>
+                        {product.discountPrice > 0 && (
+                          <div className="text-xs text-gray-400 line-through">₹{product.discountPrice}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {product.hasVariants ? (
+                          <div className="text-sm text-gray-700">
+                            {product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0)} units
+                            <span className="text-xs text-gray-500 block">(variants)</span>
+                          </div>
+                        ) : (
+                          <span className={`text-sm font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-500' : 'text-red-600'}`}>
+                            {product.stock} units
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 inline-flex text-xs font-semibold rounded-full ${
+                            product.isActive
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {product.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <Link
+                            to={`/admin/products/edit/${product._id}`}
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Product"
+                          >
+                            <FiEdit className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(product._id)}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Product"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Card View - Visible only on mobile */}
+        <div className="md:hidden space-y-4">
+          {products.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
+              No products found. Add your first product!
+            </div>
+          ) : (
+            products.map((product) => (
+              <div key={product._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                {/* Product Header */}
+                <div className="p-4 flex items-start gap-3">
+                  <img
+                    className="h-16 w-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                    src={product.images[0]?.url || 'https://via.placeholder.com/64'}
+                    alt={product.name}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
+                      {product.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">{product.sku}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                        {product.category?.name || 'N/A'}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          product.isActive
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Details */}
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      {/* Price */}
+                      <div>
+                        <p className="text-xs text-gray-500">Price</p>
+                        <p className="text-sm font-bold text-gray-900">₹{product.price}</p>
+                        {product.discountPrice > 0 && (
+                          <p className="text-xs text-gray-400 line-through">₹{product.discountPrice}</p>
+                        )}
+                      </div>
+                      {/* Stock */}
+                      <div>
+                        <p className="text-xs text-gray-500">Stock</p>
+                        {product.hasVariants ? (
+                          <p className="text-sm font-medium text-gray-700">
+                            {product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0)} units
+                          </p>
+                        ) : (
+                          <p className={`text-sm font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-orange-500' : 'text-red-600'}`}>
+                            {product.stock} units
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{product.category?.name || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">₹{product.price}</div>
-                    {product.discountPrice > 0 && (
-                      <div className="text-sm text-gray-500 line-through">₹{product.discountPrice}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {product.hasVariants ? (
-                      <div className="text-sm text-gray-900">
-                        {product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0)} units (variants)
-                      </div>
-                    ) : (
-                      <div className={`text-sm ${product.stock > 10 ? 'text-green-600' : 'text-red-600'}`}>
-                        {product.stock} units
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {product.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      to={`/admin/products/edit/${product._id}`}
-                      className="text-primary-600 hover:text-primary-900 mr-4"
-                    >
-                      <FiEdit className="inline" />
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(product._id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <FiTrash2 className="inline" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/admin/products/edit/${product._id}`}
+                        className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <FiEdit className="w-5 h-5" />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(product._id)}
+                        className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      >
+                        <FiTrash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Product Count */}
+        <div className="mt-4 text-sm text-gray-500 text-center sm:text-left">
+          Showing {products.length} product{products.length !== 1 ? 's' : ''}
+        </div>
       </div>
     </>
   );
