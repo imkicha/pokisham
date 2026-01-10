@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react';
 import { FiX, FiGift, FiArrowRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import API from '../../api/axios';
+import useBadgeVisibility from '../../hooks/useBadgeVisibility';
 
 const OfferBadge = () => {
   const [offers, setOffers] = useState([]);
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Use badge visibility hook - hides for 15 mins after viewing
+  const { shouldShowBadge, markAsViewed } = useBadgeVisibility('offerBadge');
 
   useEffect(() => {
     fetchOffers();
@@ -39,21 +43,22 @@ const OfferBadge = () => {
 
   const handleBadgeClick = () => {
     setIsOpen(true);
+    markAsViewed(); // Mark as viewed - badge will hide for 15 mins
   };
 
   const handleClose = () => {
     setIsOpen(false);
   };
 
-  // Don't render if no offers or loading
-  if (loading || offers.length === 0) return null;
+  // Don't render if no offers, loading, or badge should be hidden
+  if (loading || offers.length === 0 || (!shouldShowBadge && !isOpen)) return null;
 
   const currentOffer = offers[currentOfferIndex];
 
   return (
     <>
       {/* Floating Offer Badge - Fixed at bottom right */}
-      {!isOpen && (
+      {!isOpen && shouldShowBadge && (
         <div
           className="fixed bottom-4 right-4 z-50 cursor-pointer animate-bounce"
           onClick={handleBadgeClick}

@@ -82,9 +82,9 @@ const HeroSlider = () => {
   };
 
   // Render Welcome Slide (index 0)
-  // Height: 450px mobile, 450px tablet, 500px desktop
+  // Height: 1920x700 ratio (mobile: 280px, tablet: 450px, desktop: 700px)
   const renderWelcomeSlide = () => (
-    <div className="relative w-full south-indian-pattern overflow-hidden h-[450px] sm:h-[450px] md:h-[500px]">
+    <div className="relative w-full south-indian-pattern overflow-hidden h-[280px] sm:h-[450px] lg:h-[700px]">
       <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 via-pink-500/10 to-secondary-600/20"></div>
 
       {/* Animated floating elements */}
@@ -116,7 +116,7 @@ const HeroSlider = () => {
   // Render Offer Slide
   const renderOfferSlide = (offer) => {
     if (offer.image) {
-      // Full banner image - displays at full width, height auto
+      // Full banner image - display at full natural size
       return (
         <Link to={offer.link || '/products'} className="block w-full">
           <img
@@ -128,11 +128,11 @@ const HeroSlider = () => {
       );
     }
 
-    // Color Background Banner - fixed height
+    // Color Background Banner - 1920x700 ratio
     return (
       <Link
         to={offer.link || '/products'}
-        className="block w-full relative h-[450px] sm:h-[450px] md:h-[500px]"
+        className="block w-full relative h-[280px] sm:h-[450px] lg:h-[700px]"
         style={{ backgroundColor: offer.backgroundColor }}
       >
         <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-8">
@@ -193,7 +193,7 @@ const HeroSlider = () => {
 
   if (loading) {
     return (
-      <div className="w-full h-[450px] sm:h-[450px] md:h-[500px] bg-gradient-to-br from-primary-50 to-pink-50 flex items-center justify-center">
+      <div className="w-full h-[280px] sm:h-[450px] lg:h-[700px] bg-gradient-to-br from-primary-50 to-pink-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );

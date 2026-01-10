@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react';
 import { FiX, FiPackage, FiArrowRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import API from '../../api/axios';
+import useBadgeVisibility from '../../hooks/useBadgeVisibility';
 
 const NewProductBadge = () => {
   const [newProducts, setNewProducts] = useState([]);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Use badge visibility hook - hides for 15 mins after viewing
+  const { shouldShowBadge, markAsViewed } = useBadgeVisibility('newProductBadge');
 
   useEffect(() => {
     fetchNewProducts();
@@ -39,14 +43,15 @@ const NewProductBadge = () => {
 
   const handleBadgeClick = () => {
     setIsOpen(true);
+    markAsViewed(); // Mark as viewed - badge will hide for 15 mins
   };
 
   const handleClose = () => {
     setIsOpen(false);
   };
 
-  // Don't render if no new products or loading
-  if (loading || newProducts.length === 0) return null;
+  // Don't render if no new products, loading, or badge should be hidden
+  if (loading || newProducts.length === 0 || (!shouldShowBadge && !isOpen)) return null;
 
   const currentProduct = newProducts[currentProductIndex];
 
@@ -71,7 +76,7 @@ const NewProductBadge = () => {
   return (
     <>
       {/* Floating New Product Badge - Fixed at bottom left */}
-      {!isOpen && (
+      {!isOpen && shouldShowBadge && (
         <div
           className="fixed bottom-4 left-4 z-50 cursor-pointer animate-bounce"
           onClick={handleBadgeClick}
