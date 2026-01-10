@@ -37,6 +37,9 @@ import OrdersManagement from './pages/admin/OrdersManagement';
 import UsersManagement from './pages/admin/UsersManagement';
 import ContactMessages from './pages/admin/ContactMessages';
 import CategoriesManagement from './pages/admin/CategoriesManagement';
+import NavbarSettings from './pages/admin/NavbarSettings';
+import OfferManagement from './pages/admin/OfferManagement';
+import TreasureSettings from './pages/admin/TreasureSettings';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import TenantManagement from './pages/superadmin/TenantManagement';
 import TenantDetails from './pages/superadmin/TenantDetails';
@@ -469,6 +472,36 @@ function App() {
                 <ProtectedRoute adminOnly={true}>
                   <Layout>
                     <CategoriesManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/navbar-settings"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <NavbarSettings />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/offers"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <OfferManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/treasure-settings"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <TreasureSettings />
                   </Layout>
                 </ProtectedRoute>
               }

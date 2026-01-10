@@ -1,5 +1,7 @@
 const Product = require('../models/Product');
 const cloudinary = require('../config/cloudinary');
+const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Get all products with filters
 // @route   GET /api/products
@@ -249,6 +251,27 @@ exports.createProduct = async (req, res) => {
     }
 
     const product = await Product.create(productData);
+
+    // Send notifications to all users about the new product
+    try {
+      const users = await User.find({ isActive: true }).select('_id');
+      const notificationPromises = users.map(user =>
+        createNotification({
+          recipient: user._id,
+          type: 'new_product',
+          title: 'New Product Added!',
+          message: `Check out our new product: ${product.name}`,
+          link: `/product/${product._id}`,
+          relatedProduct: product._id,
+        })
+      );
+      // Run notifications in background, don't wait for them
+      Promise.all(notificationPromises).catch(err =>
+        console.error('Error sending new product notifications:', err)
+      );
+    } catch (notifError) {
+      console.error('Error preparing notifications:', notifError);
+    }
 
     res.status(201).json({
       success: true,
@@ -565,6 +588,36 @@ exports.createProductReview = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Review added successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Get new arrivals (products added in last 7 days)
+// @route   GET /api/products/new-arrivals
+// @access  Public
+exports.getNewArrivals = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const products = await Product.find({
+      isActive: true,
+      createdAt: { $gte: sevenDaysAgo },
+    })
+      .populate('category', 'name slug')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products,
     });
   } catch (error) {
     res.status(500).json({

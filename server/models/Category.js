@@ -23,6 +23,14 @@ const categorySchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    showInNavbar: {
+      type: Boolean,
+      default: false,
+    },
+    navbarOrder: {
+      type: Number,
+      default: 0,
+    },
     // Tenant support - null means global category (admin-created)
     tenantId: {
       type: mongoose.Schema.Types.ObjectId,

@@ -10,6 +10,8 @@ const ProductsPage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const categorySlug = searchParams.get('category');
+  const sortParam = searchParams.get('sort');
+  const isNewArrivals = sortParam === 'latest';
 
   useEffect(() => {
     const categoryName = getCurrentCategory();
@@ -17,7 +19,7 @@ const ProductsPage = () => {
     fetchCategories();
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug]);
+  }, [categorySlug, sortParam]);
 
   const fetchCategories = async () => {
     try {
@@ -33,9 +35,20 @@ const ProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const { data } = await API.get('/products', {
-        params: categorySlug ? { category: categorySlug } : {},
-      });
+      let data;
+
+      if (isNewArrivals) {
+        // Fetch new arrivals only
+        const response = await API.get('/products/new-arrivals');
+        data = response.data;
+      } else {
+        // Fetch all products or by category
+        const response = await API.get('/products', {
+          params: categorySlug ? { category: categorySlug } : {},
+        });
+        data = response.data;
+      }
+
       if (data.success) {
         setProducts(data.products);
       }
@@ -47,6 +60,7 @@ const ProductsPage = () => {
   };
 
   const getCurrentCategory = () => {
+    if (isNewArrivals) return 'New Arrivals';
     if (!categorySlug) return 'All Products';
     const category = categories.find(cat => cat.slug === categorySlug);
     return category ? category.name : 'Products';
@@ -54,7 +68,9 @@ const ProductsPage = () => {
 
   const getBreadcrumbs = () => {
     const breadcrumbs = [{ label: 'Products', path: '/products' }];
-    if (categorySlug) {
+    if (isNewArrivals) {
+      breadcrumbs.push({ label: 'New Arrivals' });
+    } else if (categorySlug) {
       breadcrumbs.push({ label: getCurrentCategory() });
     }
     return breadcrumbs;
@@ -69,7 +85,9 @@ const ProductsPage = () => {
             {getCurrentCategory()}
           </h1>
           <p className="text-gray-600">
-            {categorySlug
+            {isNewArrivals
+              ? 'Check out our latest products just added to the store!'
+              : categorySlug
               ? `Browse our collection of ${getCurrentCategory().toLowerCase()}`
               : 'Browse our complete product catalog'}
           </p>
@@ -81,7 +99,9 @@ const ProductsPage = () => {
         </div>
       ) : products.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-600 text-lg">No products found in this category.</p>
+          <p className="text-gray-600 text-lg">
+            {isNewArrivals ? 'No new arrivals at the moment.' : 'No products found in this category.'}
+          </p>
           <p className="text-gray-500 mt-2">Check back soon for new arrivals!</p>
         </div>
       ) : (

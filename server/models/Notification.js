@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['order_assigned', 'order_status', 'tenant_approved', 'tenant_rejected', 'general'],
+      enum: ['order_assigned', 'order_status', 'tenant_approved', 'tenant_rejected', 'new_product', 'general'],
     },
     title: {
       type: String,
@@ -30,6 +30,10 @@ const notificationSchema = new mongoose.Schema(
     relatedTenant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Tenant',
+    },
+    relatedProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
     },
     isRead: {
       type: Boolean,

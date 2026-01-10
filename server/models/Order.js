@@ -98,7 +98,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['UPI', 'Card', 'NetBanking', 'COD'],
+      enum: ['UPI', 'Card', 'NetBanking', 'COD', 'ONLINE'],
     },
     paymentInfo: {
       razorpayOrderId: String,

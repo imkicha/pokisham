@@ -75,6 +75,10 @@ app.use('/api/tenants', require('./routes/tenantRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/offers', require('./routes/offerRoutes'));
+app.use('/api/treasure-config', require('./routes/treasureConfigRoutes'));
+app.use('/api/coupons', require('./routes/couponRoutes'));
+app.use('/api/payment', require('./routes/paymentRoutes'));
 
 // Health check route
 app.get('/health', (req, res) => {

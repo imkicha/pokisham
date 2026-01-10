@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiCopy, FiCheck } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import API from '../../api/axios';
 
 const Treasure = () => {
   const navigate = useNavigate();
@@ -9,13 +10,36 @@ const Treasure = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [treasureConfig, setTreasureConfig] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch treasure config from API
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const { data } = await API.get('/treasure-config');
+        if (data.success && data.config) {
+          setTreasureConfig(data.config);
+        }
+      } catch (error) {
+        console.error('Failed to fetch treasure config:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
-    // Only show treasure for authenticated users
-    if (!isAuthenticated) {
+    // Only show treasure for authenticated users and if config exists
+    if (!isAuthenticated || loading || !treasureConfig) {
       setIsVisible(false);
       return;
     }
+
+    const appearanceInterval = treasureConfig.appearanceInterval || 180000; // Default 3 minutes
 
     // Check if user just logged in
     const justLoggedIn = sessionStorage.getItem('justLoggedIn');
@@ -42,19 +66,15 @@ const Treasure = () => {
     // For subsequent appearances, check timing
     const lastShownTime = localStorage.getItem('treasureLastShown');
     if (lastShownTime) {
-      // Check if 3 minutes have passed since last shown
       const timePassed = now - parseInt(lastShownTime);
-      const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
 
-      if (timePassed >= threeMinutes) {
-        // Show immediately if 3 minutes passed
-        console.log('3 minutes passed - showing treasure');
+      if (timePassed >= appearanceInterval) {
+        console.log('Interval passed - showing treasure');
         setRandomPosition();
         setIsVisible(true);
         localStorage.setItem('treasureLastShown', now.toString());
       } else {
-        // Show after remaining time
-        const remainingTime = threeMinutes - timePassed;
+        const remainingTime = appearanceInterval - timePassed;
         console.log(`Treasure will appear in ${Math.round(remainingTime / 1000)} seconds`);
         const showTimer = setTimeout(() => {
           setRandomPosition();
@@ -86,15 +106,13 @@ const Treasure = () => {
     return () => {
       clearInterval(moveTimer);
     };
-  }, [isOpen, isAuthenticated]);
+  }, [isOpen, isAuthenticated, loading, treasureConfig]);
 
   const setRandomPosition = () => {
-    // Adjust treasure size based on screen width
-    const treasureSize = window.innerWidth < 640 ? 80 : 100; // 80px for mobile, 100px for desktop
+    const treasureSize = window.innerWidth < 640 ? 80 : 100;
     const maxX = window.innerWidth - treasureSize;
     const maxY = window.innerHeight - treasureSize;
 
-    // Keep treasure visible and away from edges
     const padding = 20;
     const x = Math.max(padding, Math.min(Math.random() * maxX, maxX - padding));
     const y = Math.max(padding, Math.min(Math.random() * maxY, maxY - padding));
@@ -109,34 +127,47 @@ const Treasure = () => {
   const handleClose = () => {
     setIsVisible(false);
     setIsOpen(false);
-    // Set next appearance time to 3 minutes from now
     localStorage.setItem('treasureLastShown', Date.now().toString());
 
-    // Schedule next appearance after 3 minutes
+    const appearanceInterval = treasureConfig?.appearanceInterval || 180000;
     setTimeout(() => {
       setRandomPosition();
       setIsVisible(true);
       localStorage.setItem('treasureLastShown', Date.now().toString());
-    }, 3 * 60 * 1000); // 3 minutes
+    }, appearanceInterval);
+  };
+
+  const handleCopyCoupon = async () => {
+    if (treasureConfig?.couponCode) {
+      try {
+        await navigator.clipboard.writeText(treasureConfig.couponCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy coupon:', error);
+      }
+    }
   };
 
   const handleClaim = () => {
-    // Navigate to a special discount page or show coupon
     navigate('/products?discount=treasure');
     setIsVisible(false);
     setIsOpen(false);
-    // Set next appearance time to 3 minutes from now
     localStorage.setItem('treasureLastShown', Date.now().toString());
 
-    // Schedule next appearance after 3 minutes
+    const appearanceInterval = treasureConfig?.appearanceInterval || 180000;
     setTimeout(() => {
       setRandomPosition();
       setIsVisible(true);
       localStorage.setItem('treasureLastShown', Date.now().toString());
-    }, 3 * 60 * 1000); // 3 minutes
+    }, appearanceInterval);
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || !treasureConfig) return null;
+
+  const discountText = treasureConfig.discountType === 'percentage'
+    ? `${treasureConfig.discountValue}% OFF`
+    : `₹${treasureConfig.discountValue} OFF`;
 
   return (
     <>
@@ -152,7 +183,6 @@ const Treasure = () => {
         >
           {/* Treasure Chest */}
           <div className="relative group">
-            {/* Chest - Using Closed Treasure Image - Responsive size */}
             <div className="relative w-16 h-16 sm:w-20 sm:h-20 transform group-hover:scale-110 transition-transform">
               <img
                 src="/treasure-closed-removebg-preview.png"
@@ -174,7 +204,7 @@ const Treasure = () => {
               ))}
             </div>
 
-            {/* Tooltip - Hidden on mobile, shown on hover for desktop */}
+            {/* Tooltip */}
             <div className="hidden sm:block absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 rounded-lg text-xs sm:text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
               Click to open treasure!
               <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -183,9 +213,9 @@ const Treasure = () => {
         </div>
       )}
 
-      {/* Treasure Modal - Responsive padding */}
+      {/* Treasure Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-75 p-3 sm:p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-75 p-4 animate-fade-in overflow-y-auto">
           {/* Confetti Animation */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(50)].map((_, i) => (
@@ -206,42 +236,83 @@ const Treasure = () => {
             ))}
           </div>
 
-          {/* Modal Content - Responsive padding and max-width */}
-          <div className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 md:p-8 animate-scale-in">
-            {/* Close Button - Responsive size */}
+          {/* Modal Content */}
+          <div className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md mx-auto my-auto p-5 sm:p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
             <button
               onClick={handleClose}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-1.5 sm:p-2 hover:bg-white rounded-full transition-colors"
+              className="absolute top-3 right-3 z-10 p-2 bg-white hover:bg-gray-100 rounded-full transition-colors shadow-md"
             >
-              <FiX className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+              <FiX className="w-5 h-5 text-gray-600" />
             </button>
 
             {/* Treasure Content */}
-            <div className="text-center">
-              {/* Treasure Offer Image - Responsive margins */}
-              <div className="relative inline-block mb-4 sm:mb-6 animate-scale-in w-full">
+            <div className="text-center pt-2">
+              {/* Title */}
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 pr-8">
+                {treasureConfig.title || 'You Found a Treasure!'}
+              </h2>
+
+              {/* Treasure Image */}
+              <div className="relative mb-4 mx-auto" style={{ maxWidth: '200px' }}>
                 <img
-                  src="/treasure-offer.png"
+                  src={treasureConfig.treasureImage || '/treasure-offer.png'}
                   alt="Special Offer"
-                  className="w-full h-auto object-contain drop-shadow-2xl rounded-lg"
+                  className="w-full h-auto object-contain drop-shadow-lg rounded-lg"
                   onError={(e) => {
-                    console.error('Failed to load treasure-offer.png');
-                    e.target.style.display = 'none';
+                    console.error('Failed to load treasure image');
+                    e.target.src = '/treasure-offer.png';
                   }}
-                  onLoad={() => console.log('Treasure offer image loaded successfully')}
                 />
               </div>
 
-              <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6 animate-slide-up px-2" style={{ animationDelay: '0.2s' }}>
-                This treasure appears every 3 minutes. Keep exploring for more surprises!
+              {/* Discount Badge */}
+              <div className="mb-3">
+                <span className="inline-block bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2 rounded-full text-base sm:text-lg font-bold shadow-lg">
+                  {discountText}
+                </span>
+              </div>
+
+              {/* Coupon Code Box */}
+              <div className="bg-white rounded-xl p-3 sm:p-4 mb-3 shadow-inner border-2 border-dashed border-yellow-400">
+                <p className="text-xs text-gray-500 mb-1">Your Coupon Code</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg sm:text-xl font-mono font-bold text-primary-600 tracking-wider">
+                    {treasureConfig.couponCode}
+                  </span>
+                  <button
+                    onClick={handleCopyCoupon}
+                    className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Copy coupon code"
+                  >
+                    {copied ? (
+                      <FiCheck className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <FiCopy className="w-4 h-4 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+                {treasureConfig.minOrderValue > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Min. order: ₹{treasureConfig.minOrderValue}
+                  </p>
+                )}
+                {treasureConfig.maxDiscount && (
+                  <p className="text-xs text-gray-500">
+                    Max. discount: ₹{treasureConfig.maxDiscount}
+                  </p>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-600 mb-4 px-2">
+                {treasureConfig.description || 'Use this special coupon code on your next purchase!'}
               </p>
 
               <button
                 onClick={handleClaim}
-                className="btn-primary w-full transform hover:scale-105 transition-all shadow-lg hover:shadow-xl animate-slide-up text-sm sm:text-base"
-                style={{ animationDelay: '0.3s' }}
+                className="btn-primary w-full transform hover:scale-105 transition-all shadow-lg hover:shadow-xl text-sm sm:text-base py-2.5"
               >
-                Claim Your Reward
+                Shop Now
               </button>
             </div>
           </div>

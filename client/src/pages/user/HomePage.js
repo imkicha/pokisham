@@ -5,6 +5,9 @@ import ProductCard from '../../components/product/ProductCard';
 import API from '../../api/axios';
 import { PokishamBanner } from '../../components/common/PokishamRibbon';
 import Treasure from '../../components/common/Treasure';
+import HeroSlider from '../../components/common/HeroSlider';
+import OfferBadge from '../../components/common/OfferBadge';
+import NewProductBadge from '../../components/common/NewProductBadge';
 
 // Default placeholder image for categories without images
 const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400';
@@ -22,6 +25,7 @@ const getCategoryIcon = (categoryName) => {
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -30,6 +34,7 @@ const HomePage = () => {
     document.title = 'Pokisham - Handcrafted Treasures';
     fetchProducts();
     fetchCategories();
+    fetchNewArrivals();
   }, []);
 
   const fetchProducts = async () => {
@@ -68,40 +73,33 @@ const HomePage = () => {
     }
   };
 
+  const fetchNewArrivals = async () => {
+    try {
+      const { data } = await API.get('/products/new-arrivals?limit=4');
+      if (data.success) {
+        setNewArrivals(data.products);
+      }
+    } catch (error) {
+      console.error('Failed to fetch new arrivals:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Floating Treasure */}
       <Treasure />
 
+      {/* Floating Offer Badge */}
+      <OfferBadge />
+
+      {/* Floating New Product Badge */}
+      <NewProductBadge />
+
       {/* Pokisham Promotional Banner */}
       <PokishamBanner variant="festive" />
 
-      {/* Hero Section */}
-      <section className="relative h-[500px] md:h-[600px] flex items-center justify-center south-indian-pattern overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 via-pink-500/10 to-secondary-600/20 animate-gradient"></div>
-
-        {/* Animated floating elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-20 h-20 bg-primary-300 rounded-full opacity-20 animate-float"></div>
-          <div className="absolute bottom-32 right-20 w-32 h-32 bg-secondary-300 rounded-full opacity-20 animate-float" style={{animationDelay: '1s'}}></div>
-          <div className="absolute top-40 right-40 w-16 h-16 bg-pink-300 rounded-full opacity-20 animate-float" style={{animationDelay: '2s'}}></div>
-        </div>
-
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold mb-6 animate-fade-in">
-            Welcome to <span className="text-gradient animate-pulse-slow">Pokisham</span>
-          </h1>
-          <p className="text-lg md:text-xl lg:text-2xl text-gray-700 mb-8 max-w-2xl mx-auto animate-slide-up">
-            Discover authentic South Indian gifts, custom frames, pottery, and traditional Golu Bommai
-          </p>
-          <Link
-            to="/products"
-            className="inline-flex items-center gap-2 btn-primary text-lg animate-scale-in transform hover:gap-3 transition-all"
-          >
-            Shop Now <FiArrowRight className="animate-pulse" />
-          </Link>
-        </div>
-      </section>
+      {/* Hero Slider - Welcome + Offers */}
+      <HeroSlider />
 
       {/* Categories Section */}
       <section className="py-12 sm:py-16 bg-gradient-to-b from-white to-gray-50">
@@ -191,6 +189,34 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* New Arrivals Section */}
+      {newArrivals.length > 0 && (
+        <section className="py-16 bg-white">
+          <div className="container-custom">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full mb-4 animate-pulse">
+                <span className="text-lg">✨</span>
+                <span className="font-semibold">Just In!</span>
+              </div>
+              <h2 className="text-4xl font-display font-bold mb-4 text-gradient">New Arrivals</h2>
+              <p className="text-gray-600 text-lg">Fresh additions to our collection</p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              {newArrivals.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+
+            <div className="text-center mt-8">
+              <Link to="/products?sort=latest" className="btn-primary inline-flex items-center gap-2">
+                View All New Arrivals <FiArrowRight />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products Section */}
       {featuredProducts.length > 0 && (

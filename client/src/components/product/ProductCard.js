@@ -47,6 +47,16 @@ const ProductCard = ({ product }) => {
   const displayPrice = product.discountPrice || product.price;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
 
+  // Check if product is new (added within last 7 days)
+  const isNewProduct = () => {
+    if (!product.createdAt) return false;
+    const createdDate = new Date(product.createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now - createdDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
   return (
     <Link to={`/product/${product._id}`} className="card group overflow-hidden">
       {/* Image */}
@@ -59,6 +69,11 @@ const ProductCard = ({ product }) => {
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-2">
+          {isNewProduct() && (
+            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded font-semibold animate-pulse">
+              NEW
+            </span>
+          )}
           {hasDiscount && (
             <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
               {Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF

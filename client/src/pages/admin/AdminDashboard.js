@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp, FiMessageCircle, FiGrid } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp, FiMessageCircle, FiGrid, FiMenu, FiGift, FiBox } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const AdminDashboard = () => {
@@ -77,6 +77,27 @@ const AdminDashboard = () => {
       link: '/admin/categories',
       icon: FiGrid,
       color: 'text-orange-600',
+    },
+    {
+      title: 'Navbar Settings',
+      description: 'Manage which categories appear in the navbar',
+      link: '/admin/navbar-settings',
+      icon: FiMenu,
+      color: 'text-teal-600',
+    },
+    {
+      title: 'Manage Offers',
+      description: 'Create promotional banners for festivals and sales',
+      link: '/admin/offers',
+      icon: FiGift,
+      color: 'text-red-600',
+    },
+    {
+      title: 'Treasure Settings',
+      description: 'Configure the floating treasure box coupon code',
+      link: '/admin/treasure-settings',
+      icon: FiBox,
+      color: 'text-yellow-600',
     },
   ];
 

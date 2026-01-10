@@ -20,15 +20,11 @@ const AccordionItem = ({ title, icon: Icon, children, isOpen, onToggle }) => {
           }`}
         />
       </button>
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        <div className="px-2 pb-4 text-gray-600 leading-relaxed">
+      {isOpen && (
+        <div className="max-h-[300px] overflow-y-auto px-2 pb-4 text-gray-600 leading-relaxed whitespace-pre-wrap break-words scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           {children}
         </div>
-      </div>
+      )}
     </div>
   );
 };

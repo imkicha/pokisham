@@ -12,6 +12,7 @@ const {
   createProductReview,
   getRelatedProducts,
   getProductCommissionStats,
+  getNewArrivals,
 } = require('../controllers/productController');
 const { protect, authorize, isAdminOrSuperAdmin, canManageProducts, isSuperAdmin } = require('../middleware/auth');
 
@@ -20,6 +21,9 @@ const upload = multer({ dest: 'uploads/' });
 
 // Admin routes - MUST come before generic routes
 router.get('/admin/commission-stats', protect, isSuperAdmin, getProductCommissionStats);
+
+// Public routes - MUST come before /:id route
+router.get('/new-arrivals', getNewArrivals);
 
 router.route('/').get(getProducts).post(protect, canManageProducts, upload.array('images', 10), createProduct);
 

@@ -1,25 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import NotificationBell from '../common/NotificationBell';
+import API from '../../api/axios';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   const { user, isAuthenticated, isAdmin, isSuperAdmin, isTenant, logout } = useAuth();
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
   const navigate = useNavigate();
 
-  const categories = [
+  // Default categories as fallback
+  const defaultCategories = [
     { name: 'Gifts', path: '/products?category=gifts' },
     { name: 'Custom Frames', path: '/products?category=custom-frames' },
     { name: 'Pottery', path: '/products?category=pottery' },
     { name: 'Golu Bommai', path: '/products?category=kolu-bommai' },
   ];
+
+  // Fetch navbar categories from backend
+  useEffect(() => {
+    const fetchNavbarCategories = async () => {
+      try {
+        const { data } = await API.get('/categories/navbar');
+        if (data.success && data.categories && data.categories.length > 0) {
+          setCategories(data.categories.map(cat => ({
+            name: cat.name,
+            path: `/products?category=${cat.slug}`
+          })));
+        } else {
+          setCategories(defaultCategories);
+        }
+      } catch (error) {
+        // Silently fallback to default categories on error
+        setCategories(defaultCategories);
+      }
+    };
+    fetchNavbarCategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -221,15 +246,10 @@ const Header = () => {
               <Link
                 key={category.name}
                 to={category.path}
-                className={`transition-all transform hover:translate-x-2 font-medium py-2 px-4 rounded-lg hover:bg-primary-50 animate-fade-in flex items-center gap-2 ${
-                  category.highlight
-                    ? 'text-primary-600 bg-primary-50'
-                    : 'text-gray-700 hover:text-primary-600'
-                }`}
+                className="text-gray-700 hover:text-primary-600 transition-all transform hover:translate-x-2 font-medium py-2 px-4 rounded-lg hover:bg-primary-50 animate-fade-in"
                 onClick={() => setMobileMenuOpen(false)}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {category.icon && <category.icon className="w-5 h-5" />}
                 {category.name}
               </Link>
             ))}

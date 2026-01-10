@@ -312,3 +312,77 @@ exports.canCreateProducts = async (req, res) => {
     });
   }
 };
+
+// @desc    Get navbar categories (public)
+// @route   GET /api/categories/navbar
+// @access  Public
+exports.getNavbarCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({
+      isActive: true,
+      showInNavbar: true,
+      tenantId: null, // Only global categories in navbar
+    })
+      .select('name slug')
+      .sort({ navbarOrder: 1, name: 1 });
+
+    res.status(200).json({
+      success: true,
+      categories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update navbar categories (Admin only)
+// @route   PUT /api/categories/navbar
+// @access  Private/Admin
+exports.updateNavbarCategories = async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+
+    if (!Array.isArray(categoryIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'categoryIds must be an array',
+      });
+    }
+
+    // First, remove all categories from navbar
+    await Category.updateMany(
+      { tenantId: null },
+      { showInNavbar: false, navbarOrder: 0 }
+    );
+
+    // Then, add selected categories to navbar with order
+    for (let i = 0; i < categoryIds.length; i++) {
+      await Category.findByIdAndUpdate(categoryIds[i], {
+        showInNavbar: true,
+        navbarOrder: i + 1,
+      });
+    }
+
+    // Return updated navbar categories
+    const navbarCategories = await Category.find({
+      showInNavbar: true,
+      tenantId: null,
+    })
+      .select('name slug navbarOrder')
+      .sort({ navbarOrder: 1 });
+
+    res.status(200).json({
+      success: true,
+      message: 'Navbar categories updated successfully',
+      categories: navbarCategories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

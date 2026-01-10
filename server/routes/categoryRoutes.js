@@ -9,11 +9,17 @@ const {
   deleteCategory,
   getTenantCategories,
   canCreateProducts,
+  getNavbarCategories,
+  updateNavbarCategories,
 } = require('../controllers/categoryController');
 const { protect, authorize } = require('../middleware/auth');
 
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
+
+// Navbar routes (public GET, admin PUT)
+router.get('/navbar', getNavbarCategories);
+router.put('/navbar', protect, authorize('admin', 'superadmin'), updateNavbarCategories);
 
 // Tenant-specific routes (must come before /:id routes)
 router.get('/tenant/my-categories', protect, authorize('tenant'), getTenantCategories);
