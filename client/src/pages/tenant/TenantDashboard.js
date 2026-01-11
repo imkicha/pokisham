@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiPackage, FiShoppingBag, FiDollarSign, FiTrendingUp, FiClock } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiDollarSign, FiTrendingUp, FiClock, FiTag } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const TenantDashboard = () => {
@@ -286,6 +286,15 @@ const TenantDashboard = () => {
               <FiClock className="w-6 h-6 sm:w-8 sm:h-8 mb-2" />
               <h3 className="font-semibold text-sm sm:text-base">Pending Orders</h3>
               <p className="text-xs sm:text-sm opacity-90 mt-1">{stats.pendingOrders} awaiting action</p>
+            </Link>
+
+            <Link
+              to="/tenant/offers"
+              className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-4 sm:p-6 rounded-lg hover:from-red-600 hover:to-pink-700 transition-all shadow-md hover:shadow-lg"
+            >
+              <FiTag className="w-6 h-6 sm:w-8 sm:h-8 mb-2" />
+              <h3 className="font-semibold text-sm sm:text-base">My Offers</h3>
+              <p className="text-xs sm:text-sm opacity-90 mt-1">Create discount coupons</p>
             </Link>
 
             <Link

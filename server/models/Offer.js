@@ -80,6 +80,70 @@ const offerSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    // ===== NEW FIELDS FOR ADMIN & TENANT OFFERS =====
+    offerType: {
+      type: String,
+      enum: ['global', 'category', 'tenant'],
+      default: 'global',
+      // global = applies to all products (admin only)
+      // category = applies to specific categories (admin only)
+      // tenant = applies to tenant's own products only
+    },
+    // For category-specific offers (admin)
+    applicableCategories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+    }],
+    // For tenant-specific offers or when admin targets specific tenants
+    applicableTenants: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    // For tenant's own offers - the tenant who created it
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    // Minimum order amount for the offer to apply
+    minOrderAmount: {
+      type: Number,
+      default: 0,
+    },
+    // Maximum discount amount (for percentage discounts)
+    maxDiscountAmount: {
+      type: Number,
+      default: 0, // 0 means no limit
+    },
+    // Usage limits
+    usageLimit: {
+      type: Number,
+      default: 0, // 0 means unlimited
+    },
+    usageCount: {
+      type: Number,
+      default: 0,
+    },
+    // Per user usage limit
+    perUserLimit: {
+      type: Number,
+      default: 0, // 0 means unlimited
+    },
+    // Can this offer be combined with other offers?
+    canCombine: {
+      type: Boolean,
+      default: false,
+    },
+    // Users who have used this offer (for per-user limit tracking)
+    usedBy: [{
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      usageCount: {
+        type: Number,
+        default: 1,
+      },
+    }],
   },
   {
     timestamps: true,
@@ -88,5 +152,7 @@ const offerSchema = new mongoose.Schema(
 
 // Index for querying active offers
 offerSchema.index({ isActive: 1, startDate: 1, endDate: 1 });
+offerSchema.index({ offerType: 1, tenant: 1 });
+offerSchema.index({ couponCode: 1 });
 
 module.exports = mongoose.model('Offer', offerSchema);

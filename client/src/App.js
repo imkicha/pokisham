@@ -11,6 +11,7 @@ import Footer from './components/layout/Footer';
 // Components
 import WelcomeRedirect from './components/common/WelcomeRedirect';
 import InstallPWA from './components/common/InstallPWA';
+import WhatsAppButton from './components/common/WhatsAppButton';
 
 // Pages
 import WelcomePage from './pages/WelcomePage';
@@ -39,6 +40,7 @@ import ContactMessages from './pages/admin/ContactMessages';
 import CategoriesManagement from './pages/admin/CategoriesManagement';
 import NavbarSettings from './pages/admin/NavbarSettings';
 import OfferManagement from './pages/admin/OfferManagement';
+import ComboOfferManagement from './pages/admin/ComboOfferManagement';
 import TreasureSettings from './pages/admin/TreasureSettings';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import TenantManagement from './pages/superadmin/TenantManagement';
@@ -52,6 +54,8 @@ import TenantProducts from './pages/tenant/TenantProducts';
 import TenantOrders from './pages/tenant/TenantOrders';
 import TenantOrderDetail from './pages/tenant/TenantOrderDetail';
 import TenantProfile from './pages/tenant/TenantProfile';
+import TenantOffers from './pages/tenant/TenantOffers';
+import TenantComboOffers from './pages/tenant/TenantComboOffers';
 import TenantApplication from './pages/TenantApplication';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
@@ -100,6 +104,7 @@ const Layout = ({ children }) => {
       <Header />
       <main className="flex-grow">{children}</main>
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 };
@@ -394,6 +399,26 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/tenant/offers"
+              element={
+                <ProtectedRoute tenantOnly={true}>
+                  <Layout>
+                    <TenantOffers />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tenant/combo-offers"
+              element={
+                <ProtectedRoute tenantOnly={true}>
+                  <Layout>
+                    <TenantComboOffers />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin Routes */}
             <Route
@@ -492,6 +517,16 @@ function App() {
                 <ProtectedRoute adminOnly={true}>
                   <Layout>
                     <OfferManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/combo-offers"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Layout>
+                    <ComboOfferManagement />
                   </Layout>
                 </ProtectedRoute>
               }

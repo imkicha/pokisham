@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiPackage, FiCheckCircle, FiTag, FiX, FiCreditCard, FiShield } from 'react-icons/fi';
+import { FiCheck, FiPackage, FiCheckCircle, FiTag, FiX, FiCreditCard, FiShield, FiLayers, FiGift } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import Breadcrumb from '../../components/common/Breadcrumb';
@@ -54,6 +54,11 @@ const CheckoutPage = () => {
   const [razorpayKey, setRazorpayKey] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
 
+  // Combo offer state
+  const [availableCombos, setAvailableCombos] = useState([]);
+  const [appliedCombo, setAppliedCombo] = useState(null);
+  const [comboLoading, setComboLoading] = useState(false);
+
   // ------------------------------
   // 🚀 useEffect FIX
   // ------------------------------
@@ -95,7 +100,43 @@ const CheckoutPage = () => {
       }
     };
     fetchRazorpayKey();
-  }, [isAuthenticated, cart, user, navigate, orderSuccess]);
+
+    // Fetch applicable combo offers
+    const fetchComboOffers = async () => {
+      if (!cart || !cart.items || cart.items.length === 0) return;
+
+      try {
+        setComboLoading(true);
+        const cartItems = cart.items.map(item => ({
+          product: {
+            _id: item.product._id,
+            tenant: item.product.tenant,
+            category: item.product.category?._id || item.product.category,
+          },
+          price: item.product.discountPrice || item.product.price,
+          quantity: item.quantity,
+        }));
+
+        const { data } = await API.post('/combo-offers/validate', {
+          cartItems,
+          cartTotal: getCartTotal(),
+        });
+
+        if (data.success && data.combos?.length > 0) {
+          setAvailableCombos(data.combos);
+          // Auto-apply the best combo if no coupon is applied
+          if (!appliedCoupon && data.bestCombo) {
+            setAppliedCombo(data.bestCombo);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch combo offers:', error);
+      } finally {
+        setComboLoading(false);
+      }
+    };
+    fetchComboOffers();
+  }, [isAuthenticated, cart, user, navigate, orderSuccess, getCartTotal, appliedCoupon]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -142,7 +183,26 @@ const CheckoutPage = () => {
   const shippingFee = deliveryChargeFixed;
 
   // Calculate discount from coupon
-  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0;
+
+  // Calculate combo discount
+  const comboDiscount = appliedCombo ? appliedCombo.discount : 0;
+
+  // Check if admin offers can be applied on top of combo
+  const canStackWithCoupon = appliedCombo ? appliedCombo.allowAdminOffersOnTop : true;
+
+  // Total discount - if combo allows stacking, add both; otherwise use higher one
+  let discount = 0;
+  if (appliedCombo && appliedCoupon) {
+    if (canStackWithCoupon) {
+      discount = comboDiscount + couponDiscount;
+    } else {
+      // Use the higher discount
+      discount = Math.max(comboDiscount, couponDiscount);
+    }
+  } else {
+    discount = comboDiscount + couponDiscount;
+  }
 
   const total = subtotal + giftWrapFee + packingCharge + deliveryChargeFixed - discount;
 
@@ -157,14 +217,30 @@ const CheckoutPage = () => {
     setCouponError('');
 
     try {
-      const { data } = await API.post('/coupons/validate', {
-        code: couponCode.trim(),
+      // Prepare cart items for validation
+      const cartItems = cart.items.map(item => ({
+        product: {
+          _id: item.product._id,
+          tenant: item.product.tenant,
+          category: item.product.category?._id || item.product.category,
+        },
+        price: getItemPrice(item),
+        quantity: item.quantity,
+      }));
+
+      const { data } = await API.post('/offers/validate-coupon', {
+        couponCode: couponCode.trim(),
+        cartItems,
         cartTotal: subtotal
       });
 
       if (data.success) {
-        setAppliedCoupon(data.coupon);
-        toast.success(`Coupon applied! You save ₹${data.coupon.discount}`);
+        setAppliedCoupon({
+          ...data.offer,
+          code: data.offer.couponCode,
+          discount: data.discount,
+        });
+        toast.success(`Coupon applied! You save ₹${data.discount}`);
         setCouponCode('');
       }
     } catch (error) {
@@ -212,19 +288,31 @@ const CheckoutPage = () => {
       taxPrice: 0,
       discountPrice: discount,
       couponCode: appliedCoupon?.code || null,
+      comboOfferId: appliedCombo?._id || null,
+      comboDiscount: comboDiscount,
+      couponDiscount: couponDiscount,
     };
-  }, [cart, shippingAddress, subtotal, giftWrapFee, packingCharge, shippingFee, total, discount, appliedCoupon]);
+  }, [cart, shippingAddress, subtotal, giftWrapFee, packingCharge, shippingFee, total, discount, appliedCoupon, appliedCombo, comboDiscount, couponDiscount]);
 
   // Handle order completion (common for both COD and Online)
   const handleOrderSuccess = async (orderId) => {
     setOrderId(orderId);
 
-    // Mark coupon as used if applied
-    if (appliedCoupon) {
+    // Mark offer/coupon as used if applied
+    if (appliedCoupon && appliedCoupon._id) {
       try {
-        await API.post('/coupons/use', { code: appliedCoupon.code });
+        await API.post(`/offers/${appliedCoupon._id}/use`);
       } catch (err) {
         console.error('Failed to mark coupon as used:', err);
+      }
+    }
+
+    // Mark combo offer as used if applied
+    if (appliedCombo && appliedCombo._id) {
+      try {
+        await API.post(`/combo-offers/${appliedCombo._id}/use`);
+      } catch (err) {
+        console.error('Failed to mark combo as used:', err);
       }
     }
 
@@ -661,6 +749,72 @@ const CheckoutPage = () => {
                 ))}
               </div>
 
+              {/* Combo Offers Section */}
+              {(availableCombos.length > 0 || appliedCombo) && (
+                <div className="mb-4 pb-4 border-b">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FiLayers className="w-4 h-4 text-purple-600" />
+                    <span className="font-medium text-sm">Combo Offer</span>
+                    {comboLoading && (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
+                    )}
+                  </div>
+
+                  {appliedCombo ? (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <FiGift className="w-5 h-5 text-purple-600" />
+                          <div>
+                            <p className="font-medium text-purple-700">{appliedCombo.title}</p>
+                            <p className="text-xs text-purple-600">You save ₹{appliedCombo.discount}</p>
+                            {appliedCombo.badge && (
+                              <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
+                                {appliedCombo.badge}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAppliedCombo(null)}
+                          className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                          <FiX className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {!canStackWithCoupon && appliedCoupon && (
+                        <p className="text-xs text-amber-600 mt-2">
+                          Note: This combo cannot be combined with coupons. Using higher discount.
+                        </p>
+                      )}
+                    </div>
+                  ) : availableCombos.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600">Available combo offers:</p>
+                      {availableCombos.slice(0, 3).map((combo) => (
+                        <button
+                          key={combo._id}
+                          type="button"
+                          onClick={() => setAppliedCombo(combo)}
+                          className="w-full text-left p-2 bg-purple-50 border border-purple-100 rounded-lg hover:border-purple-300 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm text-purple-700">{combo.title}</p>
+                              <p className="text-xs text-purple-600">Save ₹{combo.discount}</p>
+                            </div>
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                              Apply
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               {/* Coupon Code Section */}
               <div className="mb-4 pb-4 border-b">
                 <div className="flex items-center gap-2 mb-2">
@@ -746,10 +900,30 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                {discount > 0 && (
+                {comboDiscount > 0 && (
+                  <div className="flex justify-between text-purple-600">
+                    <span className="flex items-center gap-1">
+                      <FiLayers className="w-3 h-3" />
+                      Combo Discount
+                    </span>
+                    <span className="font-medium">-₹{comboDiscount}</span>
+                  </div>
+                )}
+
+                {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
-                    <span className="font-medium">-₹{discount}</span>
+                    <span className="flex items-center gap-1">
+                      <FiTag className="w-3 h-3" />
+                      Coupon Discount
+                    </span>
+                    <span className="font-medium">-₹{couponDiscount}</span>
+                  </div>
+                )}
+
+                {discount > 0 && comboDiscount > 0 && couponDiscount > 0 && (
+                  <div className="flex justify-between text-green-700 font-medium pt-1 border-t border-green-100">
+                    <span>Total Savings</span>
+                    <span>-₹{discount}</span>
                   </div>
                 )}
               </div>

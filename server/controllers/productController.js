@@ -13,7 +13,13 @@ exports.getProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Build query
-    const queryObj = { isActive: true };
+    const queryObj = {};
+
+    // Only show active products for public requests
+    // Admin can pass includeInactive=true to see all products
+    if (req.query.includeInactive !== 'true') {
+      queryObj.isActive = true;
+    }
 
     if (req.query.category) {
       // Find category by slug
@@ -437,6 +443,46 @@ exports.deleteProduct = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Product deleted successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Toggle product active status
+// @route   PUT /api/products/:id/toggle-status
+// @access  Private/Admin
+exports.toggleProductStatus = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    // Check if tenant is trying to toggle another tenant's product
+    if (req.user.role === 'tenant') {
+      if (!product.tenantId || product.tenantId.toString() !== req.user.tenantId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only update your own products',
+        });
+      }
+    }
+
+    product.isActive = !product.isActive;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
+      product,
     });
   } catch (error) {
     res.status(500).json({

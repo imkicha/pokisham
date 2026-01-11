@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiPlus, FiEdit2, FiTrash2, FiX, FiImage, FiCalendar, FiTag, FiToggleLeft, FiToggleRight, FiGift } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiX, FiImage, FiCalendar, FiTag, FiToggleLeft, FiToggleRight, FiGift, FiGlobe, FiGrid, FiUsers } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const festivalTypes = [
@@ -26,8 +26,14 @@ const displayLocations = [
   { value: 'checkout', label: 'Checkout Page' },
 ];
 
+const offerTypes = [
+  { value: 'global', label: 'Global (All Products)', icon: FiGlobe, description: 'Applies to all products in the store' },
+  { value: 'category', label: 'Category Specific', icon: FiGrid, description: 'Applies only to selected categories' },
+];
+
 const OfferManagement = () => {
   const [offers, setOffers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
@@ -47,6 +53,13 @@ const OfferManagement = () => {
     priority: 0,
     displayLocation: ['homepage_banner'],
     isActive: true,
+    // New fields for offer types
+    offerType: 'global',
+    applicableCategories: [],
+    minOrderAmount: 0,
+    maxDiscountAmount: 0,
+    usageLimit: 0,
+    perUserLimit: 0,
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -57,7 +70,19 @@ const OfferManagement = () => {
   useEffect(() => {
     document.title = 'Offer Management - Pokisham Admin';
     fetchOffers();
+    fetchCategories();
   }, [filter]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await API.get('/categories');
+      if (data.success) {
+        setCategories(data.categories);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
 
   const fetchOffers = async () => {
     try {
@@ -96,6 +121,12 @@ const OfferManagement = () => {
         priority: offer.priority || 0,
         displayLocation: offer.displayLocation || ['homepage_banner'],
         isActive: offer.isActive,
+        offerType: offer.offerType || 'global',
+        applicableCategories: offer.applicableCategories?.map(c => c._id || c) || [],
+        minOrderAmount: offer.minOrderAmount || 0,
+        maxDiscountAmount: offer.maxDiscountAmount || 0,
+        usageLimit: offer.usageLimit || 0,
+        perUserLimit: offer.perUserLimit || 0,
       });
       setImagePreview(offer.image || '');
     } else {
@@ -118,6 +149,12 @@ const OfferManagement = () => {
         priority: 0,
         displayLocation: ['homepage_banner'],
         isActive: true,
+        offerType: 'global',
+        applicableCategories: [],
+        minOrderAmount: 0,
+        maxDiscountAmount: 0,
+        usageLimit: 0,
+        perUserLimit: 0,
       });
       setImagePreview('');
     }
@@ -159,6 +196,21 @@ const OfferManagement = () => {
     }
   };
 
+  const handleCategoryChange = (categoryId) => {
+    const currentCategories = formData.applicableCategories;
+    if (currentCategories.includes(categoryId)) {
+      setFormData({
+        ...formData,
+        applicableCategories: currentCategories.filter(c => c !== categoryId),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        applicableCategories: [...currentCategories, categoryId],
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -181,7 +233,7 @@ const OfferManagement = () => {
     try {
       const formDataToSend = new FormData();
       Object.keys(formData).forEach(key => {
-        if (key === 'displayLocation') {
+        if (key === 'displayLocation' || key === 'applicableCategories') {
           formDataToSend.append(key, formData[key].join(','));
         } else {
           formDataToSend.append(key, formData[key]);
@@ -542,6 +594,80 @@ const OfferManagement = () => {
                     />
                   </div>
 
+                  {/* Offer Type Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Offer Type
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {offerTypes.map((type) => {
+                        const Icon = type.icon;
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, offerType: type.value, applicableCategories: [] })}
+                            className={`p-4 rounded-lg border-2 text-left transition-all ${
+                              formData.offerType === type.value
+                                ? 'border-primary-500 bg-primary-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Icon className={`w-5 h-5 ${formData.offerType === type.value ? 'text-primary-600' : 'text-gray-500'}`} />
+                              <div>
+                                <p className={`font-medium ${formData.offerType === type.value ? 'text-primary-700' : 'text-gray-900'}`}>
+                                  {type.label}
+                                </p>
+                                <p className="text-xs text-gray-500">{type.description}</p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Category Selection (only for category offer type) */}
+                  {formData.offerType === 'category' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Categories *
+                      </label>
+                      <div className="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                        {categories.length === 0 ? (
+                          <p className="text-gray-500 text-sm">No categories available</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            {categories.map((category) => (
+                              <label
+                                key={category._id}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                                  formData.applicableCategories.includes(category._id)
+                                    ? 'bg-primary-50 border border-primary-200'
+                                    : 'hover:bg-gray-50 border border-transparent'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={formData.applicableCategories.includes(category._id)}
+                                  onChange={() => handleCategoryChange(category._id)}
+                                  className="rounded text-primary-600 focus:ring-primary-500"
+                                />
+                                <span className="text-sm text-gray-700">{category.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {formData.applicableCategories.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.applicableCategories.length} categor{formData.applicableCategories.length === 1 ? 'y' : 'ies'} selected
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Discount Settings */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -587,6 +713,73 @@ const OfferManagement = () => {
                       </>
                     )}
                   </div>
+
+                  {/* Advanced Discount Settings (when discount is enabled) */}
+                  {formData.discountType !== 'none' && (
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                      <h4 className="font-medium text-gray-900 text-sm">Advanced Settings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Min. Order Amount (₹)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.minOrderAmount}
+                            onChange={(e) => setFormData({ ...formData, minOrderAmount: parseInt(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            min="0"
+                            placeholder="0 = No minimum"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">0 = No minimum order required</p>
+                        </div>
+                        {formData.discountType === 'percentage' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Max. Discount (₹)
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.maxDiscountAmount}
+                              onChange={(e) => setFormData({ ...formData, maxDiscountAmount: parseInt(e.target.value) || 0 })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              min="0"
+                              placeholder="0 = No limit"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">0 = No maximum discount cap</p>
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Total Usage Limit
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.usageLimit}
+                            onChange={(e) => setFormData({ ...formData, usageLimit: parseInt(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            min="0"
+                            placeholder="0 = Unlimited"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">0 = Unlimited usage</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Per User Limit
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.perUserLimit}
+                            onChange={(e) => setFormData({ ...formData, perUserLimit: parseInt(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            min="0"
+                            placeholder="0 = Unlimited"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">0 = Unlimited per user</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Link & Button */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

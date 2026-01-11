@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiPlus, FiEdit, FiTrash2, FiSearch, FiPackage, FiTag, FiX, FiImage } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiSearch, FiPackage, FiTag, FiX, FiImage, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const TenantProducts = () => {
@@ -139,7 +139,8 @@ const TenantProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const { data } = await API.get('/products');
+      // Include inactive products for tenant's own product management
+      const { data } = await API.get('/products?includeInactive=true&limit=1000');
 
       if (data.success) {
         // Filter products for this tenant
@@ -167,6 +168,18 @@ const TenantProducts = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to delete product');
+    }
+  };
+
+  const handleToggleStatus = async (productId) => {
+    try {
+      const { data } = await API.put(`/products/${productId}/toggle-status`);
+      if (data.success) {
+        toast.success(data.message);
+        fetchProducts();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to toggle product status');
     }
   };
 
@@ -429,6 +442,9 @@ const TenantProducts = () => {
                     Stock
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -436,7 +452,7 @@ const TenantProducts = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
                       {searchTerm ? 'No products found matching your search' : 'No products yet. Add your first product to get started!'}
                     </td>
                   </tr>
@@ -476,6 +492,24 @@ const TenantProducts = () => {
                         }`}>
                           {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                         </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => handleToggleStatus(product._id)}
+                          className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center gap-1 cursor-pointer transition-colors ${
+                            product.isActive
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                          title={product.isActive ? 'Click to deactivate' : 'Click to activate'}
+                        >
+                          {product.isActive ? (
+                            <FiToggleRight className="w-4 h-4" />
+                          ) : (
+                            <FiToggleLeft className="w-4 h-4" />
+                          )}
+                          {product.isActive ? 'Active' : 'Inactive'}
+                        </button>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex gap-2">

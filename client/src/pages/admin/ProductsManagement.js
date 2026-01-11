@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
@@ -16,7 +16,8 @@ const ProductsManagement = () => {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await API.get('/products');
+      // Include inactive products for admin view
+      const { data } = await API.get('/products?includeInactive=true&limit=1000');
       if (data.success) {
         setProducts(data.products);
       }
@@ -40,6 +41,18 @@ const ProductsManagement = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to delete product');
+    }
+  };
+
+  const handleToggleStatus = async (id) => {
+    try {
+      const { data } = await API.put(`/products/${id}/toggle-status`);
+      if (data.success) {
+        toast.success(data.message);
+        fetchProducts();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to toggle product status');
     }
   };
 
@@ -143,15 +156,22 @@ const ProductsManagement = () => {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs font-semibold rounded-full ${
+                        <button
+                          onClick={() => handleToggleStatus(product._id)}
+                          className={`px-3 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full cursor-pointer transition-colors ${
                             product.isActive
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
                           }`}
+                          title={product.isActive ? 'Click to deactivate' : 'Click to activate'}
                         >
+                          {product.isActive ? (
+                            <FiToggleRight className="w-4 h-4" />
+                          ) : (
+                            <FiToggleLeft className="w-4 h-4" />
+                          )}
                           {product.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
@@ -204,15 +224,21 @@ const ProductsManagement = () => {
                       <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
                         {product.category?.name || 'N/A'}
                       </span>
-                      <span
-                        className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                      <button
+                        onClick={() => handleToggleStatus(product._id)}
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-full flex items-center gap-1 ${
                           product.isActive
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
                         }`}
                       >
+                        {product.isActive ? (
+                          <FiToggleRight className="w-3 h-3" />
+                        ) : (
+                          <FiToggleLeft className="w-3 h-3" />
+                        )}
                         {product.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FiX, FiGift, FiArrowRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import API from '../../api/axios';
@@ -9,6 +9,10 @@ const OfferBadge = () => {
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Touch swipe state
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // Use badge visibility hook - hides for 15 mins after viewing
   const { shouldShowBadge, markAsViewed } = useBadgeVisibility('offerBadge');
@@ -48,6 +52,30 @@ const OfferBadge = () => {
 
   const handleClose = () => {
     setIsOpen(false);
+  };
+
+  // Touch swipe handlers for mobile
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+
+    if (Math.abs(swipeDistance) > minSwipeDistance) {
+      if (swipeDistance > 0) {
+        // Swipe left - next offer
+        setCurrentOfferIndex((prev) => (prev + 1) % offers.length);
+      } else {
+        // Swipe right - previous offer
+        setCurrentOfferIndex((prev) => (prev - 1 + offers.length) % offers.length);
+      }
+    }
   };
 
   // Don't render if no offers, loading, or badge should be hidden
@@ -115,7 +143,12 @@ const OfferBadge = () => {
           </div>
 
           {/* Modal Content - Same background as Treasure */}
-          <div className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl max-w-lg sm:max-w-xl md:max-w-2xl w-full pt-12 sm:pt-14 px-5 pb-5 sm:px-6 sm:pb-6 md:px-8 md:pb-8 animate-scale-in">
+          <div
+            className="relative bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-50 rounded-2xl shadow-2xl max-w-lg sm:max-w-xl md:max-w-2xl w-full pt-12 sm:pt-14 px-5 pb-5 sm:px-6 sm:pb-6 md:px-8 md:pb-8 animate-scale-in"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {/* Close Button - High z-index to stay on top */}
             <button
               onClick={handleClose}

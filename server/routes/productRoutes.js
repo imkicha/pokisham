@@ -7,6 +7,7 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  toggleProductStatus,
   uploadProductImages,
   deleteProductImage,
   createProductReview,
@@ -32,6 +33,8 @@ router
   .get(getProduct)
   .put(protect, canManageProducts, upload.array('images', 10), updateProduct)
   .delete(protect, canManageProducts, deleteProduct);
+
+router.put('/:id/toggle-status', protect, canManageProducts, toggleProductStatus);
 
 router.post(
   '/:id/images',

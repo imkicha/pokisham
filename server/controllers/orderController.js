@@ -510,7 +510,11 @@ exports.cancelOrder = async (req, res) => {
 // @access  Private/Admin
 exports.getDashboardStats = async (req, res) => {
   try {
+    // Total counts
     const totalOrders = await Order.countDocuments();
+    const totalProducts = await Product.countDocuments({ isActive: true });
+    const totalUsers = await User.countDocuments({ role: 'user' });
+
     const pendingOrders = await Order.countDocuments({ orderStatus: 'Pending' });
     const deliveredOrders = await Order.countDocuments({ orderStatus: 'Delivered' });
 
@@ -542,6 +546,8 @@ exports.getDashboardStats = async (req, res) => {
       success: true,
       stats: {
         totalOrders,
+        totalProducts,
+        totalUsers,
         pendingOrders,
         deliveredOrders,
         totalRevenue,
