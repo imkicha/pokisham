@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -111,6 +112,7 @@ const Layout = ({ children }) => {
 
 function App() {
   return (
+    <HelmetProvider>
     <Router>
       <AuthProvider>
         <CartProvider>
@@ -564,6 +566,7 @@ function App() {
         </CartProvider>
       </AuthProvider>
     </Router>
+    </HelmetProvider>
   );
 }
 

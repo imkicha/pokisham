@@ -81,6 +81,90 @@ app.use('/api/treasure-config', require('./routes/treasureConfigRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 
+// Dynamic Sitemap for SEO (includes product pages)
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const Category = require('./models/Category');
+
+    const products = await Product.find({ isActive: true }).select('_id updatedAt').lean();
+    const categories = await Category.find({ isActive: true }).select('slug updatedAt').lean();
+
+    const baseUrl = 'https://www.pokisham.com';
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/products</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/become-seller</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>`;
+
+    // Add category pages
+    for (const category of categories) {
+      const lastMod = category.updatedAt ? new Date(category.updatedAt).toISOString().split('T')[0] : '';
+      xml += `
+  <url>
+    <loc>${baseUrl}/products?category=${category.slug}</loc>
+    ${lastMod ? `<lastmod>${lastMod}</lastmod>` : ''}
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }
+
+    // Add product pages
+    for (const product of products) {
+      const lastMod = product.updatedAt ? new Date(product.updatedAt).toISOString().split('T')[0] : '';
+      xml += `
+  <url>
+    <loc>${baseUrl}/product/${product._id}</loc>
+    ${lastMod ? `<lastmod>${lastMod}</lastmod>` : ''}
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }
+
+    xml += `
+</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({

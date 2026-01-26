@@ -1,6 +1,7 @@
 import { FiHeart, FiAward, FiUsers, FiPackage, FiStar, FiGift } from 'react-icons/fi';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import giftImage from '../../assets/images/pokisham-gift-removebg-preview.png';
+import SEO from '../../components/common/SEO';
 
 const AboutPage = () => {
   const breadcrumbs = [{ label: 'About Us' }];
@@ -32,6 +33,20 @@ const AboutPage = () => {
 
   return (
     <>
+      <SEO
+        title="About Us"
+        description="Learn about Pokisham - your destination for handcrafted South Indian treasures. 5+ years of experience delivering premium quality handmade gifts, custom frames, and pottery."
+        url="/about"
+        keywords="about Pokisham, handcrafted gifts, South Indian artisans, handmade products"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'Pokisham',
+          url: 'https://www.pokisham.com',
+          description: 'Your destination for handcrafted South Indian treasures.',
+          logo: 'https://www.pokisham.com/logo512.png',
+        }}
+      />
       <Breadcrumb items={breadcrumbs} />
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}

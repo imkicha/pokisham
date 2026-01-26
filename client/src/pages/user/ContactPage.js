@@ -5,6 +5,7 @@ import Breadcrumb from '../../components/common/Breadcrumb';
 import toast from 'react-hot-toast';
 import API from '../../api/axios';
 import giftImage from '../../assets/images/pokisham-gift-removebg-preview.png';
+import SEO from '../../components/common/SEO';
 
 const ContactPage = () => {
   const breadcrumbs = [{ label: 'Contact Us' }];
@@ -94,6 +95,18 @@ const ContactPage = () => {
 
   return (
     <>
+      <SEO
+        title="Contact Us"
+        description="Get in touch with Pokisham. We'd love to hear from you! Reach us via phone, email, or WhatsApp for any queries about our handcrafted products."
+        url="/contact"
+        keywords="contact Pokisham, customer support, handcrafted gifts inquiry"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'ContactPage',
+          name: 'Contact Pokisham',
+          url: 'https://www.pokisham.com/contact',
+        }}
+      />
       <Breadcrumb items={breadcrumbs} />
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}

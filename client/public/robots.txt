@@ -1,3 +1,18 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin/
+Disallow: /tenant/
+Disallow: /superadmin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /profile
+Disallow: /orders
+Disallow: /cart
+Disallow: /checkout
+Disallow: /wishlist
+
+# Sitemap
+Sitemap: https://www.pokisham.com/sitemap.xml

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import ProductAccordion from '../../components/product/ProductAccordion';
+import SEO from '../../components/common/SEO';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -230,8 +231,51 @@ const ProductDetail = () => {
     { label: product.name }
   ];
 
+  // Build product JSON-LD structured data
+  const productJsonLd = product ? {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description,
+    image: product.images?.map(img => img.url) || [],
+    sku: product._id,
+    brand: {
+      '@type': 'Brand',
+      name: 'Pokisham',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: `https://www.pokisham.com/product/${product._id}`,
+      priceCurrency: 'INR',
+      price: product.salePrice || product.price,
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      seller: {
+        '@type': 'Organization',
+        name: 'Pokisham',
+      },
+    },
+    ...(product.averageRating > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.averageRating,
+        reviewCount: product.reviews?.length || 1,
+      },
+    }),
+  } : null;
+
   return (
     <>
+      {product && (
+        <SEO
+          title={product.name}
+          description={product.description?.slice(0, 160) || `Buy ${product.name} at Pokisham. Handcrafted with love.`}
+          image={product.images?.[0]?.url}
+          url={`/product/${product._id}`}
+          type="product"
+          keywords={`${product.name}, ${product.category?.name || ''}, buy online, Pokisham, handcrafted`}
+          jsonLd={productJsonLd}
+        />
+      )}
       <Breadcrumb items={breadcrumbs} />
       <div className="min-h-screen bg-gray-50">
         <div className="container-custom py-4 md:py-12 px-3 md:px-4">

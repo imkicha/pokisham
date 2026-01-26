@@ -8,6 +8,7 @@ import Treasure from '../../components/common/Treasure';
 import HeroSlider from '../../components/common/HeroSlider';
 import OfferBadge from '../../components/common/OfferBadge';
 import NewProductBadge from '../../components/common/NewProductBadge';
+import SEO from '../../components/common/SEO';
 
 // Default placeholder image for categories without images
 const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400';
@@ -86,6 +87,24 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Home"
+        description="Discover unique handcrafted treasures at Pokisham. Shop handmade gifts, custom frames, pottery, and traditional Golu Bommai. Free shipping on orders above ₹999."
+        url="/"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Pokisham',
+          url: 'https://www.pokisham.com',
+          description: 'Discover unique handcrafted treasures at Pokisham.',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: 'https://www.pokisham.com/products?search={search_term_string}',
+            'query-input': 'required name=search_term_string',
+          },
+        }}
+      />
+
       {/* Floating Treasure */}
       <Treasure />
 

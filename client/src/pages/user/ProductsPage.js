@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../../components/product/ProductCard';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import API from '../../api/axios';
+import SEO from '../../components/common/SEO';
 
 const ProductsPage = () => {
   const [searchParams] = useSearchParams();
@@ -78,6 +79,12 @@ const ProductsPage = () => {
 
   return (
     <>
+      <SEO
+        title={getCurrentCategory()}
+        description={`Shop ${getCurrentCategory()} at Pokisham. Browse our collection of handcrafted products with free shipping on orders above ₹999.`}
+        url={categorySlug ? `/products?category=${categorySlug}` : '/products'}
+        keywords={`${getCurrentCategory()}, handcrafted products, buy online, Pokisham, South Indian gifts`}
+      />
       <Breadcrumb items={getBreadcrumbs()} />
       <div className="container-custom py-12">
         <div className="mb-8">
