@@ -5,6 +5,7 @@ const {
   verifyOTP,
   resendOTP,
   login,
+  googleAuth,
   getMe,
   updateProfile,
   addAddress,
@@ -29,6 +30,7 @@ router.post('/register', authLimiter, register);
 router.post('/verify-otp', otpLimiter, verifyOTP);
 router.post('/resend-otp', otpLimiter, resendOTP);
 router.post('/login', authLimiter, bruteForceProtection, login);
+router.post('/google', authLimiter, googleAuth);
 router.post('/forgot-password', passwordResetLimiter, forgotPassword);
 router.post('/reset-password', passwordResetLimiter, resetPassword);
 

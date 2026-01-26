@@ -108,6 +108,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (credential) => {
+    try {
+      const { data } = await API.post('/auth/google', { credential });
+
+      if (data.success) {
+        Cookies.set('token', data.token, {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+        Cookies.set('user', JSON.stringify(data.user), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        setUser(data.user);
+        toast.success('Login successful!');
+        return true;
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Google login failed');
+      return false;
+    }
+  };
+
   const resendOTP = async (userId) => {
     try {
       const { data } = await API.post('/auth/resend-otp', { userId });
@@ -212,6 +241,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    googleLogin,
     register,
     verifyOTP,
     resendOTP,

@@ -3,6 +3,7 @@ const generateToken = require('../utils/generateToken');
 const { generateOTP, sendOTPEmail } = require('../utils/otp');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -716,6 +717,84 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// @desc    Google Sign-In
+// @route   POST /api/auth/google
+// @access  Public
+exports.googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential is required',
+      });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    // Verify the Google token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Check if user already exists with this Google ID
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+      // Check if user exists with same email (registered via email/password)
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Link Google account to existing user
+        user.googleId = googleId;
+        user.authProvider = user.authProvider === 'local' ? 'local' : 'google';
+        if (!user.avatar && picture) {
+          user.avatar = picture;
+        }
+        user.isVerified = true;
+        await user.save();
+      } else {
+        // Create new user with Google info
+        user = await User.create({
+          name,
+          email,
+          googleId,
+          authProvider: 'google',
+          avatar: picture || '',
+          isVerified: true,
+        });
+      }
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        role: user.role,
+        tenantId: user.tenantId || null,
+        avatar: user.avatar,
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Google authentication failed. Please try again.',
     });
   }
 };

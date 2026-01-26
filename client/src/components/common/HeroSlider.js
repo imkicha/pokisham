@@ -84,7 +84,7 @@ const HeroSlider = () => {
   // Render Welcome Slide (index 0)
   // Height: 1920x700 ratio (mobile: 280px, tablet: 450px, desktop: 700px)
   const renderWelcomeSlide = () => (
-    <div className="relative w-full south-indian-pattern overflow-hidden h-[280px] sm:h-[450px] lg:h-[700px]">
+    <div className="relative w-full south-indian-pattern overflow-hidden h-[280px] sm:h-[450px] lg:h-[600px]">
       <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 via-pink-500/10 to-secondary-600/20"></div>
 
       {/* Animated floating elements */}

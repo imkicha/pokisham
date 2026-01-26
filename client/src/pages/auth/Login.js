@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FiEye, FiEyeOff, FiMail, FiLock, FiShoppingBag, FiTruck, FiGift, FiStar } from 'react-icons/fi';
 
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
+  const googleButtonRef = useRef(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,6 +19,55 @@ const Login = () => {
   useEffect(() => {
     document.title = 'Login - Pokisham';
   }, []);
+
+  // Google Sign-In callback
+  const handleGoogleResponse = useCallback(async (response) => {
+    if (response.credential) {
+      setLoading(true);
+      const success = await googleLogin(response.credential);
+      if (success) {
+        sessionStorage.setItem('justLoggedIn', 'true');
+        navigate('/');
+      }
+      setLoading(false);
+    }
+  }, [googleLogin, navigate]);
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+
+    const initGoogle = () => {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+        if (googleButtonRef.current) {
+          window.google.accounts.id.renderButton(googleButtonRef.current, {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signin_with',
+            shape: 'rectangular',
+            logo_alignment: 'center',
+          });
+        }
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      initGoogle();
+    } else {
+      const interval = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(interval);
+          initGoogle();
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [handleGoogleResponse]);
 
   const handleChange = (e) => {
     setFormData({
@@ -139,6 +191,18 @@ const Login = () => {
                 Sign in to continue shopping
               </p>
             </div>
+
+            {/* Google Sign-In Button */}
+            {GOOGLE_CLIENT_ID && (
+              <>
+                <div ref={googleButtonRef} className="flex justify-center" />
+                <div className="my-4 flex items-center">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="px-4 text-sm text-gray-500">or sign in with email</span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+              </>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}

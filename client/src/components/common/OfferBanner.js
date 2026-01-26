@@ -79,7 +79,7 @@ const OfferBanner = ({ location = 'homepage_banner' }) => {
           }`}
         >
           {currentOffer.image ? (
-            // Image Banner - displays at full width, height auto
+            // Image Banner - displays at original size (full width, auto height)
             <Link to={currentOffer.link || '/products'} className="block w-full">
               <img
                 src={currentOffer.image}
@@ -88,42 +88,42 @@ const OfferBanner = ({ location = 'homepage_banner' }) => {
               />
             </Link>
           ) : (
-            // Color Background Banner - fixed aspect ratio 1920x1000
+            // Color Background Banner - reduced height for desktop
             <Link
               to={currentOffer.link || '/products'}
-              className="block w-full relative"
-              style={{ backgroundColor: currentOffer.backgroundColor, aspectRatio: '1920/1000' }}
+              className="block w-full relative h-[240px] sm:h-[320px] lg:h-[500px]"
+              style={{ backgroundColor: currentOffer.backgroundColor }}
             >
               <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-8">
                 <div className="text-center max-w-4xl mx-auto" style={{ color: currentOffer.textColor }}>
                   {/* Festival Emoji */}
-                  <div className="text-4xl sm:text-5xl md:text-7xl mb-3 animate-bounce">
+                  <div className="text-3xl sm:text-4xl md:text-5xl mb-2 animate-bounce">
                     {getFestivalEmoji(currentOffer.festivalType)}
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-2 sm:mb-4">
+                  <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">
                     {currentOffer.title}
                   </h2>
 
                   {/* Description */}
                   {currentOffer.description && (
-                    <p className="text-sm sm:text-lg md:text-2xl mb-4 opacity-90">
+                    <p className="text-xs sm:text-base md:text-lg mb-2 opacity-90">
                       {currentOffer.description}
                     </p>
                   )}
 
                   {/* Discount & Coupon */}
                   {currentOffer.discountType !== 'none' && (
-                    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-                      <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-4 py-2 sm:px-6 sm:py-3 rounded-full text-lg sm:text-2xl font-bold">
-                        <FiTag className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+                      <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-3 py-1 sm:px-4 sm:py-2 rounded-full text-base sm:text-xl font-bold">
+                        <FiTag className="w-4 h-4 sm:w-5 sm:h-5" />
                         {currentOffer.discountType === 'percentage'
                           ? `${currentOffer.discountValue}% OFF`
                           : `₹${currentOffer.discountValue} OFF`}
                       </span>
                       {currentOffer.couponCode && (
-                        <span className="bg-white/30 backdrop-blur-sm px-4 py-2 sm:px-6 sm:py-3 rounded-full text-base sm:text-xl font-mono font-bold">
+                        <span className="bg-white/30 backdrop-blur-sm px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm sm:text-lg font-mono font-bold">
                           Code: {currentOffer.couponCode}
                         </span>
                       )}
@@ -131,7 +131,7 @@ const OfferBanner = ({ location = 'homepage_banner' }) => {
                   )}
 
                   {/* CTA Button */}
-                  <button className="inline-flex items-center gap-2 px-6 py-2 sm:px-8 sm:py-3 bg-white text-gray-900 rounded-full font-bold hover:scale-105 transition-transform text-sm sm:text-lg shadow-xl">
+                  <button className="inline-flex items-center gap-2 px-4 py-1.5 sm:px-6 sm:py-2 bg-white text-gray-900 rounded-full font-bold hover:scale-105 transition-transform text-xs sm:text-base shadow-xl">
                     {currentOffer.buttonText || 'Shop Now'} <FiArrowRight />
                   </button>
                 </div>
