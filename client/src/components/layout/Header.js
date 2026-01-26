@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX, FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FiMenu, FiX, FiShoppingCart, FiHeart, FiUser, FiLogOut, FiPackage, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -10,11 +10,38 @@ import API from '../../api/axios';
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
   const { user, isAuthenticated, isAdmin, isSuperAdmin, isTenant, logout } = useAuth();
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchInputRef = useRef(null);
+
+  // Sync search input with URL search param
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    setSearchQuery(q);
+  }, [searchParams]);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      navigate(`/products?search=${encodeURIComponent(trimmed)}`);
+      setSearchOpen(false);
+      setMobileMenuOpen(false);
+    }
+  };
 
   // Default categories as fallback
   const defaultCategories = [
@@ -64,22 +91,19 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Main Header */}
+      {/* Main Header - Row 1: Logo + Search + Actions */}
       <div className="container-custom py-2">
-        <div className="flex justify-between items-center">
-          {/* Logo with Treasure Chest */}
-          <Link to="/" className="flex items-center gap-2 transform hover:scale-105 transition-transform group">
-            {/* Treasure Chest Logo */}
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0 transform hover:scale-105 transition-transform group">
             <div className="relative flex-shrink-0">
               <img
                 src="/pokisham-logo.jpg"
                 alt="Pokisham Treasure"
-                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain transition-all"
+                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain transition-all"
               />
-              {/* Sparkle effect */}
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
             </div>
-
             <h1 className="text-lg sm:text-xl md:text-2xl font-display font-bold leading-tight">
               <span className="inline-block animate-letter text-gradient" style={{animationDelay: '0s'}}>P</span>
               <span className="inline-block animate-letter text-gradient" style={{animationDelay: '0.1s'}}>o</span>
@@ -92,25 +116,46 @@ const Header = () => {
             </h1>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
-            <Link to="/" className="text-gray-700 hover:text-primary-600 transition-all transform hover:scale-110 font-medium">
-              Home
-            </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                to={category.path}
-                className="text-gray-700 hover:text-primary-600 transition-all transform hover:scale-110 font-medium relative group"
-              >
-                {category.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all group-hover:w-full"></span>
-              </Link>
-            ))}
-          </nav>
+          {/* Desktop Search Bar - centered, takes available space */}
+          <div className="hidden md:block flex-1 max-w-xl mx-auto">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for gifts, frames, pottery, Golu Bommai..."
+                className="w-full pl-11 pr-12 py-2.5 rounded-lg border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none text-sm transition-all bg-gray-50 focus:bg-white"
+              />
+              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); navigate('/products'); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  <FiSearch className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
+          </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 ml-auto">
+            {/* Mobile Search Toggle */}
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="md:hidden p-2 hover:bg-primary-50 rounded-full transition-all"
+            >
+              <FiSearch className="w-5 h-5 text-gray-700" />
+            </button>
+
             {isAuthenticated ? (
               <>
                 {/* Wishlist */}
@@ -149,7 +194,7 @@ const Header = () => {
                     className="flex items-center gap-1 md:gap-2 p-1.5 md:p-2 hover:bg-primary-50 rounded-lg transition-all transform hover:scale-105"
                   >
                     <FiUser className="w-5 h-5 md:w-6 md:h-6 text-gray-700 hover:text-primary-600 transition-colors" />
-                    <span className="hidden md:block text-gray-700 font-medium truncate max-w-[100px]">{user?.name}</span>
+                    <span className="hidden lg:block text-gray-700 font-medium truncate max-w-[100px]">{user?.name}</span>
                   </button>
 
                   {userMenuOpen && (
@@ -207,10 +252,10 @@ const Header = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-outline py-2 px-4 text-sm hidden md:inline-block">
+                <Link to="/login" className="btn-outline py-1.5 px-3 md:py-2 md:px-4 text-sm hidden sm:inline-block">
                   Login
                 </Link>
-                <Link to="/register" className="btn-primary py-2 px-4 text-sm">
+                <Link to="/register" className="btn-primary py-1.5 px-3 md:py-2 md:px-4 text-sm">
                   Sign Up
                 </Link>
               </>
@@ -231,10 +276,69 @@ const Header = () => {
         </div>
       </div>
 
+      {/* Row 2: Desktop Navigation */}
+      <div className="hidden lg:block border-t border-gray-100 bg-gray-50">
+        <div className="container-custom">
+          <nav className="flex items-center gap-8 py-2">
+            <Link to="/" className="text-gray-700 hover:text-primary-600 transition-all font-medium text-sm">
+              Home
+            </Link>
+            {categories.map((category) => (
+              <Link
+                key={category.name}
+                to={category.path}
+                className="text-gray-700 hover:text-primary-600 transition-all font-medium text-sm relative group"
+              >
+                {category.name}
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all group-hover:w-full"></span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Mobile Search Bar - slides down */}
+      {searchOpen && (
+        <div className="md:hidden border-t bg-white shadow-md animate-slide-up">
+          <div className="container-custom py-3">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for gifts, frames, pottery..."
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none text-sm bg-gray-50 focus:bg-white"
+              />
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <button
+                type="button"
+                onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t bg-white shadow-lg animate-slide-up">
-          <nav className="container-custom py-4 flex flex-col gap-4">
+          <nav className="container-custom py-4 flex flex-col gap-3">
+            {/* Mobile Menu Search */}
+            <form onSubmit={handleSearch} className="relative mb-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none text-sm bg-gray-50 focus:bg-white"
+              />
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </form>
+
             <Link
               to="/"
               className="text-gray-700 hover:text-primary-600 transition-all transform hover:translate-x-2 font-medium py-2 px-4 rounded-lg hover:bg-primary-50"
@@ -256,7 +360,7 @@ const Header = () => {
             {!isAuthenticated && (
               <Link
                 to="/login"
-                className="text-gray-700 hover:text-primary-600 transition-all transform hover:translate-x-2 font-medium py-2 px-4 rounded-lg hover:bg-primary-50 md:hidden"
+                className="text-gray-700 hover:text-primary-600 transition-all transform hover:translate-x-2 font-medium py-2 px-4 rounded-lg hover:bg-primary-50 sm:hidden"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Login

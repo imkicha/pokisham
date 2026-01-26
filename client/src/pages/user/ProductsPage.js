@@ -12,6 +12,7 @@ const ProductsPage = () => {
   const [loading, setLoading] = useState(true);
   const categorySlug = searchParams.get('category');
   const sortParam = searchParams.get('sort');
+  const searchQuery = searchParams.get('search');
   const isNewArrivals = sortParam === 'latest';
 
   useEffect(() => {
@@ -20,7 +21,7 @@ const ProductsPage = () => {
     fetchCategories();
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug, sortParam]);
+  }, [categorySlug, sortParam, searchQuery]);
 
   const fetchCategories = async () => {
     try {
@@ -39,14 +40,13 @@ const ProductsPage = () => {
       let data;
 
       if (isNewArrivals) {
-        // Fetch new arrivals only
         const response = await API.get('/products/new-arrivals');
         data = response.data;
       } else {
-        // Fetch all products or by category
-        const response = await API.get('/products', {
-          params: categorySlug ? { category: categorySlug } : {},
-        });
+        const params = {};
+        if (categorySlug) params.category = categorySlug;
+        if (searchQuery) params.search = searchQuery;
+        const response = await API.get('/products', { params });
         data = response.data;
       }
 
@@ -61,6 +61,7 @@ const ProductsPage = () => {
   };
 
   const getCurrentCategory = () => {
+    if (searchQuery) return `Search: "${searchQuery}"`;
     if (isNewArrivals) return 'New Arrivals';
     if (!categorySlug) return 'All Products';
     const category = categories.find(cat => cat.slug === categorySlug);
@@ -69,7 +70,9 @@ const ProductsPage = () => {
 
   const getBreadcrumbs = () => {
     const breadcrumbs = [{ label: 'Products', path: '/products' }];
-    if (isNewArrivals) {
+    if (searchQuery) {
+      breadcrumbs.push({ label: `Search: "${searchQuery}"` });
+    } else if (isNewArrivals) {
       breadcrumbs.push({ label: 'New Arrivals' });
     } else if (categorySlug) {
       breadcrumbs.push({ label: getCurrentCategory() });
@@ -92,7 +95,9 @@ const ProductsPage = () => {
             {getCurrentCategory()}
           </h1>
           <p className="text-gray-600">
-            {isNewArrivals
+            {searchQuery
+              ? `Showing results for "${searchQuery}"`
+              : isNewArrivals
               ? 'Check out our latest products just added to the store!'
               : categorySlug
               ? `Browse our collection of ${getCurrentCategory().toLowerCase()}`
@@ -107,9 +112,15 @@ const ProductsPage = () => {
       ) : products.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-600 text-lg">
-            {isNewArrivals ? 'No new arrivals at the moment.' : 'No products found in this category.'}
+            {searchQuery
+              ? `No products found for "${searchQuery}".`
+              : isNewArrivals
+              ? 'No new arrivals at the moment.'
+              : 'No products found in this category.'}
           </p>
-          <p className="text-gray-500 mt-2">Check back soon for new arrivals!</p>
+          <p className="text-gray-500 mt-2">
+            {searchQuery ? 'Try a different search term or browse our collections.' : 'Check back soon for new arrivals!'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
