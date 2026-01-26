@@ -277,23 +277,44 @@ const Header = () => {
       </div>
 
       {/* Row 2: Desktop Navigation */}
-      <div className="hidden lg:block border-t border-gray-100 bg-gray-50">
+      <div className="hidden lg:block border-t border-gray-100 bg-white">
         <div className="container-custom">
-          <nav className="flex items-center gap-8 py-2">
-            <Link to="/" className="text-gray-700 hover:text-primary-600 transition-all font-medium text-sm">
-              Home
-            </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                to={category.path}
-                className="text-gray-700 hover:text-primary-600 transition-all font-medium text-sm relative group"
-              >
-                {category.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all group-hover:w-full"></span>
-              </Link>
-            ))}
-          </nav>
+          <div className="flex items-center gap-3">
+            {/* Invisible spacer matching logo width */}
+            <div className="flex-shrink-0 invisible">
+              <div className="flex items-center gap-2">
+                <div className="w-14 h-14"></div>
+                <span className="text-2xl font-display font-bold">Pokisham</span>
+              </div>
+            </div>
+            {/* Nav links aligned with search bar */}
+            <nav className="flex-1 max-w-xl mx-auto">
+              <div className="flex items-center gap-8 py-3">
+                <Link to="/" className="text-gray-700 hover:text-primary-600 transition-all font-semibold text-base">
+                  Home
+                </Link>
+                {categories.map((category) => (
+                  <Link
+                    key={category.name}
+                    to={category.path}
+                    className="text-gray-700 hover:text-primary-600 transition-all font-semibold text-base relative group whitespace-nowrap"
+                  >
+                    {category.name}
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all group-hover:w-full"></span>
+                  </Link>
+                ))}
+              </div>
+            </nav>
+            {/* Invisible spacer matching actions width */}
+            <div className="flex-shrink-0 invisible ml-auto">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10"></div>
+                <div className="w-10 h-10"></div>
+                <div className="w-10 h-10"></div>
+                <div className="w-10 h-10"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
