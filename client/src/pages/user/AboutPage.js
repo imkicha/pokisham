@@ -16,35 +16,37 @@ const AboutPage = () => {
   const values = [
     {
       icon: <FiHeart className="w-10 h-10 text-primary-600" />,
-      title: 'Handcrafted with Love',
-      description: 'Every product is carefully crafted by skilled artisans who pour their heart into creating unique pieces.',
+      title: '100% Handcrafted',
+      description: 'Every Pokisham product is handmade by skilled Indian artisans — no mass production, just authentic craftsmanship poured into every piece.',
     },
     {
       icon: <FiAward className="w-10 h-10 text-primary-600" />,
-      title: 'Quality Assurance',
-      description: 'We ensure the highest quality standards for all our products, from materials to finishing touches.',
+      title: 'Quality You Can Trust',
+      description: 'We ensure the highest quality standards for all Pokisham gifts, from premium materials to meticulous finishing touches.',
     },
     {
       icon: <FiGift className="w-10 h-10 text-primary-600" />,
-      title: 'Perfect for Gifting',
-      description: 'Our products make perfect gifts for any occasion, with beautiful packaging and personalization options.',
+      title: 'Personalized & Customizable',
+      description: 'Add names, photos, or custom messages to make every Pokisham gift truly one-of-a-kind — perfect for any occasion.',
     },
   ];
 
   return (
     <>
       <SEO
-        title="About Us"
-        description="Learn about Pokisham - your destination for handcrafted South Indian treasures. 5+ years of experience delivering premium quality handmade gifts, custom frames, and pottery."
+        title="About Pokisham - India's Handcrafted Gift Store"
+        description="Pokisham is India's trusted online gift store for handcrafted & customized gifts. Learn our story — connecting skilled Indian artisans with gift lovers since day one."
         url="/about"
-        keywords="about Pokisham, handcrafted gifts, South Indian artisans, handmade products"
+        keywords="about Pokisham, Pokisham story, Pokisham gifts, handcrafted gifts India, Indian artisan gifts, handmade gift store, customized gifts online"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'Organization',
           name: 'Pokisham',
           url: 'https://www.pokisham.com',
-          description: 'Your destination for handcrafted South Indian treasures.',
+          description: 'Pokisham is India\'s trusted online gift store for handcrafted & customized gifts, connecting skilled Indian artisans with customers who appreciate authentic handmade products.',
           logo: 'https://www.pokisham.com/logo512.png',
+          foundingDate: '2020',
+          sameAs: [],
         }}
       />
       <Breadcrumb items={breadcrumbs} />
@@ -56,7 +58,7 @@ const AboutPage = () => {
               About Pokisham
             </h1>
             <p className="text-lg sm:text-xl max-w-3xl mx-auto opacity-90 px-4">
-              Your destination for authentic South Indian handicrafts, custom frames, pottery, and traditional Golu Bommai
+              India's trusted online gift store for handcrafted & customized gifts — custom frames, pottery, Golu Bommai, and more
             </p>
           </div>
         </section>
@@ -71,19 +73,21 @@ const AboutPage = () => {
                 </h2>
                 <div className="space-y-4 text-gray-600">
                   <p>
-                    Pokisham was born from a deep love for South Indian traditions and craftsmanship.
-                    What started as a small venture to preserve traditional art forms has grown into
-                    a platform that connects skilled artisans with customers who appreciate authentic handcrafted products.
+                    Pokisham was born from a simple belief — every gift should carry emotion, culture, and craftsmanship.
+                    What started as a passion to preserve traditional Indian art forms has grown into India's trusted
+                    online gift store, connecting skilled artisans with customers who value authentic handcrafted gifts.
                   </p>
                   <p>
-                    Our name "Pokisham" represents the treasure of traditional crafts that we bring to your doorstep.
-                    We believe every handcrafted piece tells a story - of the artisan who made it,
-                    the tradition it represents, and the joy it brings to its new owner.
+                    The name "Pokisham" means treasure — and that's exactly what we bring to your doorstep.
+                    Every Pokisham gift is handmade by talented Indian artisans, making each piece unique and meaningful.
+                    We believe the best gifts aren't mass-produced — they're crafted with love.
                   </p>
                   <p>
-                    From beautiful custom photo frames to traditional Golu Bommai dolls,
-                    from elegant pottery to thoughtful gifts - we curate products that celebrate
-                    the rich cultural heritage of South India while meeting modern aesthetic sensibilities.
+                    From personalized custom photo frames to traditional Golu Bommai dolls,
+                    from elegant handmade pottery to customized keepsakes — Pokisham curates gifts that celebrate
+                    India's rich cultural heritage while meeting modern aesthetic sensibilities.
+                    Whether you're shopping for a birthday, anniversary, festival, or "just because" moment,
+                    Pokisham has the perfect handcrafted gift for every occasion.
                   </p>
                 </div>
               </div>
@@ -203,9 +207,9 @@ const AboutPage = () => {
           <div className="container-custom text-center">
             <h2 className="text-2xl sm:text-3xl font-display font-bold mb-4 sm:mb-6">Our Mission</h2>
             <p className="text-base sm:text-lg max-w-3xl mx-auto opacity-90 px-4">
-              To preserve and promote traditional South Indian craftsmanship by connecting skilled artisans
-              with customers worldwide, while ensuring fair wages for artisans and delivering
-              exceptional quality products that bring joy to every home.
+              To make Pokisham India's most loved handcrafted gift store — by connecting talented artisans
+              with gift lovers across the country, ensuring fair wages for craftspeople, and delivering
+              exceptional quality gifts that bring joy, culture, and meaning to every home.
             </p>
           </div>
         </section>

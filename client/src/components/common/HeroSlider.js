@@ -97,16 +97,19 @@ const HeroSlider = () => {
       <div className="absolute inset-0 flex items-center justify-center text-center px-4">
         <div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold mb-2 sm:mb-3 md:mb-4">
-            Welcome to <span className="text-gradient">Pokisham</span>
+            <span className="text-gradient">Pokisham</span> — Handcrafted Gifts, Made with Love
           </h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-700 mb-3 sm:mb-4 md:mb-6 max-w-2xl mx-auto">
-            Discover authentic South Indian gifts, custom frames, pottery, and traditional Golu Bommai
+          <p className="text-sm sm:text-base md:text-lg text-gray-700 mb-1 sm:mb-2 md:mb-3 max-w-2xl mx-auto">
+            India's trusted online gift store for unique handmade & customized gifts
+          </p>
+          <p className="text-xs sm:text-sm md:text-base text-gray-500 mb-3 sm:mb-4 md:mb-6 max-w-xl mx-auto">
+            Custom frames, pottery, Golu Bommai & personalized keepsakes — delivered to your doorstep
           </p>
           <Link
             to="/products"
             className="inline-flex items-center gap-2 btn-primary text-sm sm:text-base transform hover:gap-3 transition-all"
           >
-            Shop Now <FiArrowRight />
+            Explore Pokisham Gifts <FiArrowRight />
           </Link>
         </div>
       </div>

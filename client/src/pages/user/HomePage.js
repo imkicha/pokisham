@@ -32,7 +32,7 @@ const HomePage = () => {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
-    document.title = 'Pokisham - Handcrafted Treasures';
+    document.title = 'Pokisham - Handcrafted & Customized Gifts Online | Buy Unique Gifts India';
     fetchProducts();
     fetchCategories();
     fetchNewArrivals();
@@ -88,21 +88,33 @@ const HomePage = () => {
   return (
     <div className="min-h-screen">
       <SEO
-        title="Home"
-        description="Discover unique handcrafted treasures at Pokisham. Shop handmade gifts, custom frames, pottery, and traditional Golu Bommai. Free shipping on orders above ₹999."
+        title="Handcrafted & Customized Gifts Online | Buy Unique Gifts India"
+        description="Pokisham - India's trusted online gift store for handcrafted & customized gifts. Shop unique handmade frames, pottery, Golu Bommai & personalized gifts. Free shipping above ₹999."
+        keywords="Pokisham, Pokisham gifts, Pokisham online gift store, handcrafted gifts India, customized gifts online, personalized gifts, handmade gifts, custom photo frames, pottery online, Golu Bommai, South Indian gifts, unique gifts India, buy handmade gifts online, gift delivery India"
         url="/"
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: 'Pokisham',
-          url: 'https://www.pokisham.com',
-          description: 'Discover unique handcrafted treasures at Pokisham.',
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: 'https://www.pokisham.com/products?search={search_term_string}',
-            'query-input': 'required name=search_term_string',
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Pokisham',
+            url: 'https://www.pokisham.com',
+            description: 'Pokisham - India\'s trusted online gift store for handcrafted & customized gifts.',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://www.pokisham.com/products?search={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
           },
-        }}
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Pokisham',
+            url: 'https://www.pokisham.com',
+            logo: 'https://www.pokisham.com/logo512.png',
+            description: 'India\'s trusted online gift store for handcrafted & customized gifts. Handmade frames, pottery, Golu Bommai & personalized keepsakes.',
+            sameAs: [],
+          },
+        ]}
       />
 
       {/* Floating Treasure */}
@@ -218,8 +230,8 @@ const HomePage = () => {
                 <span className="text-lg">✨</span>
                 <span className="font-semibold">Just In!</span>
               </div>
-              <h2 className="text-4xl font-display font-bold mb-4 text-gradient">New Arrivals</h2>
-              <p className="text-gray-600 text-lg">Fresh additions to our collection</p>
+              <h2 className="text-4xl font-display font-bold mb-4 text-gradient">New Arrivals at Pokisham</h2>
+              <p className="text-gray-600 text-lg">Freshly crafted handmade gifts, just added to our collection</p>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -242,8 +254,8 @@ const HomePage = () => {
         <section className="py-16 bg-gray-50">
           <div className="container-custom">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-display font-bold mb-4">Featured Products</h2>
-              <p className="text-gray-600 text-lg">Handpicked favorites just for you</p>
+              <h2 className="text-4xl font-display font-bold mb-4">Featured Pokisham Gifts</h2>
+              <p className="text-gray-600 text-lg">Handpicked handcrafted favorites just for you</p>
             </div>
 
             {loading ? (
@@ -272,8 +284,8 @@ const HomePage = () => {
         <section className="py-16 bg-white">
           <div className="container-custom">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-display font-bold mb-4">Trending Now</h2>
-              <p className="text-gray-600 text-lg">What's hot this season</p>
+              <h2 className="text-4xl font-display font-bold mb-4">Trending Gifts on Pokisham</h2>
+              <p className="text-gray-600 text-lg">What's popular this season — handcrafted and loved</p>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -285,49 +297,61 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* Features Section */}
+      {/* Why Choose Pokisham Section */}
       <section className="py-16 bg-gray-50">
         <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-3 text-gradient">Why Choose Pokisham?</h2>
+            <p className="text-gray-600 text-sm sm:text-lg max-w-2xl mx-auto">Every Pokisham gift is handcrafted by skilled Indian artisans — made with care, packed with love</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiGift className="w-8 h-8 text-primary-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Free Gift Wrapping</h3>
-              <p className="text-gray-600">Make your gifts extra special with our complimentary gift wrapping</p>
+              <h3 className="text-xl font-semibold mb-2">100% Handcrafted Gifts</h3>
+              <p className="text-gray-600">Every Pokisham product is handmade by skilled artisans — no mass production, just authentic craftsmanship</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiArrowRight className="w-8 h-8 text-secondary-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Fast Delivery</h3>
-              <p className="text-gray-600">Free shipping on orders above ₹999</p>
+              <h3 className="text-xl font-semibold mb-2">Free Shipping Across India</h3>
+              <p className="text-gray-600">Enjoy free delivery on orders above ₹999 — your Pokisham gifts arrive safely at your doorstep</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FiStar className="w-8 h-8 text-accent-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Quality Guaranteed</h3>
-              <p className="text-gray-600">Handpicked products with 100% quality assurance</p>
+              <h3 className="text-xl font-semibold mb-2">Personalized & Customizable</h3>
+              <p className="text-gray-600">Add names, photos, or custom messages — make every gift from Pokisham truly one-of-a-kind</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Brand Story / CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
         <div className="container-custom text-center">
-          <h2 className="text-4xl font-display font-bold mb-4">
-            Celebrate Traditions with Pokisham
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4">
+            The Pokisham Story
           </h2>
-          <p className="text-xl mb-8 opacity-90">
-            Discover our exclusive Golu Bommai collection for the festival season
+          <p className="text-base sm:text-lg md:text-xl mb-3 opacity-90 max-w-3xl mx-auto">
+            Pokisham was born from a simple belief — every gift should carry emotion, culture, and craftsmanship.
           </p>
-          <Link to="/products?category=golu-bommai" className="btn-outline bg-white text-primary-600 hover:bg-gray-100">
-            Explore Collection
-          </Link>
+          <p className="text-sm sm:text-base md:text-lg mb-8 opacity-80 max-w-2xl mx-auto">
+            We partner with talented Indian artisans to bring you handcrafted treasures — from custom frames and pottery to traditional Golu Bommai. Every Pokisham gift tells a story.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/products" className="btn-outline bg-white text-primary-600 hover:bg-gray-100">
+              Shop All Pokisham Gifts
+            </Link>
+            <Link to="/about" className="btn-outline border-white text-white hover:bg-white/10">
+              Our Story
+            </Link>
+          </div>
         </div>
       </section>
     </div>

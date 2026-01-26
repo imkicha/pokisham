@@ -1,14 +1,14 @@
 import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'Pokisham';
-const DEFAULT_DESCRIPTION = 'Discover unique handcrafted treasures at Pokisham. Handmade products, custom frames, pottery, and traditional Golu Bommai. Free shipping on orders above ₹999.';
+const DEFAULT_DESCRIPTION = 'Pokisham - India\'s trusted online gift store for handcrafted & customized gifts. Shop unique handmade frames, pottery, Golu Bommai & personalized gifts. Free shipping above ₹999.';
 const DEFAULT_IMAGE = 'https://www.pokisham.com/logo512.png';
 const SITE_URL = 'https://www.pokisham.com';
 
 const SEO = ({
   title,
   description = DEFAULT_DESCRIPTION,
-  keywords = 'handcrafted gifts, South Indian gifts, custom frames, pottery, Golu Bommai, handmade products, Pokisham, online shopping India',
+  keywords = 'Pokisham, Pokisham gifts, Pokisham online gift store, handcrafted gifts India, customized gifts online, personalized gifts, handmade gifts, custom photo frames, pottery online, Golu Bommai, South Indian gifts, buy handmade gifts online',
   image = DEFAULT_IMAGE,
   url,
   type = 'website',
@@ -44,10 +44,17 @@ const SEO = ({
       <meta name="twitter:image" content={image} />
 
       {/* JSON-LD Structured Data */}
-      {jsonLd && (
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
+      {jsonLd && (Array.isArray(jsonLd)
+        ? jsonLd.map((item, i) => (
+            <script key={i} type="application/ld+json">
+              {JSON.stringify(item)}
+            </script>
+          ))
+        : (
+          <script type="application/ld+json">
+            {JSON.stringify(jsonLd)}
+          </script>
+        )
       )}
     </Helmet>
   );
