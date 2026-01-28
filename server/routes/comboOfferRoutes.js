@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const {
+  // Public functions
+  getActiveComboOffers,
   // Admin functions
   getAllComboOffers,
   createComboOffer,
@@ -22,6 +24,9 @@ const { protect, authorize } = require('../middleware/auth');
 
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
+
+// ===== PUBLIC ROUTES =====
+router.get('/active', getActiveComboOffers);
 
 // ===== VALIDATION ROUTES (must come before :id routes) =====
 router.post('/validate', protect, validateComboOffers);

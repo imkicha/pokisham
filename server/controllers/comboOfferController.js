@@ -760,6 +760,36 @@ exports.markComboUsed = async (req, res) => {
   }
 };
 
+// @desc    Get active combo offers (public)
+// @route   GET /api/combo-offers/active
+// @access  Public
+exports.getActiveComboOffers = async (req, res) => {
+  try {
+    const now = new Date();
+
+    const comboOffers = await ComboOffer.find({
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+    })
+      .populate('comboProducts.product', 'name price discountPrice images')
+      .populate('applicableCategories', 'name')
+      .sort({ priority: -1, createdAt: -1 })
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      count: comboOffers.length,
+      comboOffers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Get tenant's products for combo selection
 // @route   GET /api/combo-offers/tenant/my-products
 // @access  Private/Tenant

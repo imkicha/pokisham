@@ -1,6 +1,7 @@
+const path = require('path');
 const mongoose = require('mongoose');
 const User = require('../models/User');
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const ADMINS = [
   {
@@ -32,10 +33,12 @@ const createAdmins = async () => {
       if (existingUser) {
         existingUser.role = adminData.role;
         existingUser.isVerified = true;
+        existingUser.password = adminData.password;
         await existingUser.save();
 
         console.log(`✓ Updated existing ${adminData.role}`);
         console.log(`  Email: ${existingUser.email}`);
+        console.log(`  Password reset to: ${adminData.password}`);
       } else {
         const user = await User.create(adminData);
 

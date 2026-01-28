@@ -10,16 +10,24 @@ const fs = require('fs');
 exports.getActiveOffers = async (req, res) => {
   try {
     const now = new Date();
-    const location = req.query.location || 'homepage_banner';
+    const location = req.query.location;
 
-    const offers = await Offer.find({
+    const query = {
       isActive: true,
       startDate: { $lte: now },
       endDate: { $gte: now },
-      displayLocation: location,
-    })
+    };
+
+    // Filter by location unless 'all' is requested
+    if (location && location !== 'all') {
+      query.displayLocation = location;
+    } else if (!location) {
+      query.displayLocation = 'homepage_banner';
+    }
+
+    const offers = await Offer.find(query)
       .sort({ priority: -1, createdAt: -1 })
-      .limit(10);
+      .limit(20);
 
     res.status(200).json({
       success: true,

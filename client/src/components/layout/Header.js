@@ -303,6 +303,13 @@ const Header = () => {
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all group-hover:w-full"></span>
                   </Link>
                 ))}
+                <Link
+                  to="/offers"
+                  className="text-red-600 hover:text-red-700 transition-all font-semibold text-base relative group whitespace-nowrap"
+                >
+                  Offers
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all group-hover:w-full"></span>
+                </Link>
               </div>
             </nav>
             {/* Invisible spacer matching actions width */}
@@ -378,6 +385,13 @@ const Header = () => {
                 {category.name}
               </Link>
             ))}
+            <Link
+              to="/offers"
+              className="text-red-600 hover:text-red-700 transition-all transform hover:translate-x-2 font-semibold py-2 px-4 rounded-lg hover:bg-red-50"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Offers
+            </Link>
             {!isAuthenticated && (
               <Link
                 to="/login"

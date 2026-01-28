@@ -8,6 +8,7 @@ import { WishlistProvider } from './context/WishlistContext';
 // Layout
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import AdminLayout from './components/layout/AdminLayout';
 
 // Components
 import WelcomeRedirect from './components/common/WelcomeRedirect';
@@ -27,6 +28,7 @@ import WishlistPage from './pages/user/WishlistPage';
 import ProfilePage from './pages/user/ProfilePage';
 import OrdersPage from './pages/user/OrdersPage';
 import OrderDetailPage from './pages/user/OrderDetailPage';
+import OffersPage from './pages/user/OffersPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -171,6 +173,14 @@ function App() {
               element={
                 <Layout>
                   <AboutPage />
+                </Layout>
+              }
+            />
+            <Route
+              path="/offers"
+              element={
+                <Layout>
+                  <OffersPage />
                 </Layout>
               }
             />
@@ -427,9 +437,9 @@ function App() {
               path="/admin"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <AdminDashboard />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -437,9 +447,9 @@ function App() {
               path="/admin/products"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <ProductsManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -447,9 +457,9 @@ function App() {
               path="/admin/products/add"
               element={
                 <ProtectedRoute sellerOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <AddProduct />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -457,9 +467,9 @@ function App() {
               path="/admin/products/edit/:id"
               element={
                 <ProtectedRoute sellerOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <EditProduct />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -467,9 +477,9 @@ function App() {
               path="/admin/orders"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <OrdersManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -477,9 +487,9 @@ function App() {
               path="/admin/users"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <UsersManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -487,9 +497,9 @@ function App() {
               path="/admin/messages"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <ContactMessages />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -497,9 +507,9 @@ function App() {
               path="/admin/categories"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <CategoriesManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -507,9 +517,9 @@ function App() {
               path="/admin/navbar-settings"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <NavbarSettings />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -517,9 +527,9 @@ function App() {
               path="/admin/offers"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <OfferManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -527,9 +537,9 @@ function App() {
               path="/admin/combo-offers"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <ComboOfferManagement />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -537,9 +547,9 @@ function App() {
               path="/admin/treasure-settings"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <Layout>
+                  <AdminLayout>
                     <TreasureSettings />
-                  </Layout>
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
