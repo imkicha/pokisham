@@ -9,6 +9,7 @@ import HeroSlider from '../../components/common/HeroSlider';
 import OfferBadge from '../../components/common/OfferBadge';
 import NewProductBadge from '../../components/common/NewProductBadge';
 import SEO from '../../components/common/SEO';
+import OfferPopup from '../../components/common/OfferPopup';
 
 // Default placeholder image for categories without images
 const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400';
@@ -87,6 +88,7 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
+      <OfferPopup />
       <SEO
         title="Handcrafted & Customized Gifts Online | Buy Unique Gifts India"
         description="Pokisham - India's trusted online gift store for handcrafted & customized gifts. Shop unique handmade frames, pottery, Golu Bommai & personalized gifts. Free shipping above ₹999."

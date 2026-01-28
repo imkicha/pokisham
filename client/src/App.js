@@ -45,6 +45,7 @@ import NavbarSettings from './pages/admin/NavbarSettings';
 import OfferManagement from './pages/admin/OfferManagement';
 import ComboOfferManagement from './pages/admin/ComboOfferManagement';
 import TreasureSettings from './pages/admin/TreasureSettings';
+import PopupSettings from './pages/admin/PopupSettings';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import TenantManagement from './pages/superadmin/TenantManagement';
 import TenantDetails from './pages/superadmin/TenantDetails';
@@ -549,6 +550,17 @@ function App() {
                 <ProtectedRoute adminOnly={true}>
                   <AdminLayout>
                     <TreasureSettings />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/popup-settings"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <AdminLayout>
+                    <PopupSettings />
                   </AdminLayout>
                 </ProtectedRoute>
               }

@@ -78,6 +78,7 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/offers', require('./routes/offerRoutes'));
 app.use('/api/combo-offers', require('./routes/comboOfferRoutes'));
 app.use('/api/treasure-config', require('./routes/treasureConfigRoutes'));
+app.use('/api/popup', require('./routes/popupRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 

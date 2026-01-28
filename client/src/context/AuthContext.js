@@ -195,6 +195,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
 
+    // Reset offer popup so it shows on next login
+    sessionStorage.removeItem('offerPopupShown');
+
     setUser(null);
     toast.success('Logged out successfully');
   };

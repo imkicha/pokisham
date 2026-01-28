@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp, FiMessageCircle, FiGrid, FiMenu, FiGift, FiBox, FiLayers } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiUsers, FiTrendingUp, FiMessageCircle, FiGrid, FiMenu, FiGift, FiBox, FiLayers, FiImage } from 'react-icons/fi';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 import API from '../../api/axios';
 
@@ -135,6 +135,13 @@ const AdminDashboard = () => {
       link: '/admin/combo-offers',
       icon: FiLayers,
       color: 'text-purple-600',
+    },
+    {
+      title: 'Popup Poster',
+      description: 'Upload poster images for homepage popup',
+      link: '/admin/popup-settings',
+      icon: FiImage,
+      color: 'text-indigo-600',
     },
     {
       title: 'Treasure Settings',

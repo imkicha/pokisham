@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiHome, FiPackage, FiShoppingBag, FiUsers, FiMessageCircle,
-  FiGrid, FiMenu, FiGift, FiBox, FiLayers, FiChevronLeft, FiChevronRight, FiX
+  FiGrid, FiMenu, FiGift, FiBox, FiLayers, FiChevronLeft, FiChevronRight, FiX, FiImage
 } from 'react-icons/fi';
 
 const adminMenuItems = [
@@ -15,6 +15,7 @@ const adminMenuItems = [
   { title: 'Navbar Settings', path: '/admin/navbar-settings', icon: FiMenu },
   { title: 'Offers', path: '/admin/offers', icon: FiGift },
   { title: 'Combo Offers', path: '/admin/combo-offers', icon: FiLayers },
+  { title: 'Popup Poster', path: '/admin/popup-settings', icon: FiImage },
   { title: 'Treasure Settings', path: '/admin/treasure-settings', icon: FiBox },
 ];
 
@@ -31,11 +32,11 @@ const NavList = ({ items, isActive, collapsed, onItemClick }) => (
             title={collapsed ? item.title : undefined}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
               active
-                ? 'bg-primary-50 text-primary-700 border-l-2 border-primary-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                ? 'bg-white/10 text-white border-l-2 border-primary-400'
+                : 'text-gray-300 hover:bg-white/5 hover:text-white'
             } ${collapsed ? 'justify-center' : ''}`}
           >
-            <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-primary-600' : ''}`} />
+            <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-primary-400' : ''}`} />
             {!collapsed && <span>{item.title}</span>}
           </Link>
         </li>
@@ -57,17 +58,17 @@ const AdminSidebar = ({ mobileOpen, onMobileClose }) => {
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen ${
+        className={`hidden lg:flex flex-col bg-gradient-to-b from-gray-900 to-black border-r border-gray-800 transition-all duration-300 sticky top-0 h-screen ${
           collapsed ? 'w-[68px]' : 'w-60'
         }`}
       >
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
           {!collapsed && (
-            <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Admin Panel</h2>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Admin Panel</h2>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-colors"
           >
             {collapsed ? <FiChevronRight className="w-4 h-4" /> : <FiChevronLeft className="w-4 h-4" />}
           </button>
@@ -81,12 +82,12 @@ const AdminSidebar = ({ mobileOpen, onMobileClose }) => {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/40" onClick={onMobileClose} />
-          <aside className="relative w-72 max-w-[80vw] bg-white shadow-xl flex flex-col animate-slide-right">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Admin Panel</h2>
+          <aside className="relative w-72 max-w-[80vw] bg-gradient-to-b from-gray-900 to-black shadow-xl flex flex-col animate-slide-right">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Admin Panel</h2>
               <button
                 onClick={onMobileClose}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/10 transition-colors"
               >
                 <FiX className="w-5 h-5" />
               </button>
