@@ -54,6 +54,24 @@ const CheckoutPage = () => {
   const [razorpayKey, setRazorpayKey] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
 
+  // Payment config state
+  const [paymentConfig, setPaymentConfig] = useState(null);
+
+  // Auto-switch from COD if it becomes unavailable
+  useEffect(() => {
+    if (!paymentConfig || paymentMethod !== 'cod') return;
+    if (!paymentConfig.codEnabled) {
+      if (paymentConfig.onlinePaymentEnabled) setPaymentMethod('online');
+      return;
+    }
+    if (!paymentConfig.codAllCities) {
+      const userCity = shippingAddress.city.trim().toLowerCase();
+      if (userCity && !paymentConfig.codCities.includes(userCity)) {
+        if (paymentConfig.onlinePaymentEnabled) setPaymentMethod('online');
+      }
+    }
+  }, [paymentConfig, shippingAddress.city, paymentMethod]);
+
   // Combo offer state
   const [availableCombos, setAvailableCombos] = useState([]);
   const [appliedCombo, setAppliedCombo] = useState(null);
@@ -100,6 +118,25 @@ const CheckoutPage = () => {
       }
     };
     fetchRazorpayKey();
+
+    // Load payment config
+    const fetchPaymentConfig = async () => {
+      try {
+        const { data } = await API.get('/payment-config/active');
+        if (data.success) {
+          setPaymentConfig(data);
+          // Set default payment method based on config
+          if (!data.onlinePaymentEnabled && data.codEnabled) {
+            setPaymentMethod('cod');
+          } else if (data.onlinePaymentEnabled && !data.codEnabled) {
+            setPaymentMethod('online');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch payment config:', error);
+      }
+    };
+    fetchPaymentConfig();
 
     // Fetch applicable combo offers
     const fetchComboOffers = async () => {
@@ -662,57 +699,106 @@ const CheckoutPage = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-display font-bold text-gray-900 mb-4">Payment Method</h2>
 
-              <div className="space-y-3">
-                {/* Online Payment Option */}
-                <label
-                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'online'
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="online"
-                    checked={paymentMethod === 'online'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="h-4 w-4 text-primary-600"
-                  />
-                  <div className="ml-3 flex-1">
-                    <div className="flex items-center gap-2">
-                      <FiCreditCard className="w-5 h-5 text-primary-600" />
-                      <span className="font-medium">Pay Online</span>
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Recommended</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">UPI, Cards, Net Banking, Wallets</p>
-                  </div>
-                  {paymentMethod === 'online' && <FiCheck className="text-primary-600 w-5 h-5" />}
-                </label>
+              {(() => {
+                // Determine COD availability
+                const codGlobalEnabled = paymentConfig ? paymentConfig.codEnabled : true;
+                const onlineEnabled = paymentConfig ? paymentConfig.onlinePaymentEnabled : true;
+                let codAvailable = codGlobalEnabled;
+                let codUnavailableReason = '';
 
-                {/* COD Option */}
-                <label
-                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'cod'
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="h-4 w-4 text-primary-600"
-                  />
-                  <div className="ml-3 flex-1">
-                    <span className="font-medium">Cash on Delivery</span>
-                    <p className="text-xs text-gray-500 mt-1">Pay when you receive your order</p>
+                if (codGlobalEnabled && paymentConfig) {
+                  // Check city restriction
+                  if (!paymentConfig.codAllCities) {
+                    const userCity = shippingAddress.city.trim().toLowerCase();
+                    if (!userCity) {
+                      codAvailable = false;
+                      codUnavailableReason = 'Enter your city above to check COD availability';
+                    } else if (!paymentConfig.codCities.includes(userCity)) {
+                      codAvailable = false;
+                      codUnavailableReason = `COD is not available in ${shippingAddress.city}`;
+                    }
+                  }
+                  // Check min order
+                  if (codAvailable && paymentConfig.codMinOrder > 0 && total < paymentConfig.codMinOrder) {
+                    codAvailable = false;
+                    codUnavailableReason = `COD requires minimum order of ₹${paymentConfig.codMinOrder}`;
+                  }
+                  // Check max order
+                  if (codAvailable && paymentConfig.codMaxOrder > 0 && total > paymentConfig.codMaxOrder) {
+                    codAvailable = false;
+                    codUnavailableReason = `COD is not available for orders above ₹${paymentConfig.codMaxOrder}`;
+                  }
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {/* Online Payment Option */}
+                    {onlineEnabled && (
+                      <label
+                        className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          paymentMethod === 'online'
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="online"
+                          checked={paymentMethod === 'online'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="h-4 w-4 text-primary-600"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center gap-2">
+                            <FiCreditCard className="w-5 h-5 text-primary-600" />
+                            <span className="font-medium">Pay Online</span>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Recommended</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">UPI, Cards, Net Banking, Wallets</p>
+                        </div>
+                        {paymentMethod === 'online' && <FiCheck className="text-primary-600 w-5 h-5" />}
+                      </label>
+                    )}
+
+                    {/* COD Option */}
+                    {codGlobalEnabled && (
+                      <label
+                        className={`flex items-center p-4 border-2 rounded-lg transition-all ${
+                          !codAvailable
+                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                            : paymentMethod === 'cod'
+                            ? 'border-primary-500 bg-primary-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="cod"
+                          checked={paymentMethod === 'cod'}
+                          onChange={(e) => codAvailable && setPaymentMethod(e.target.value)}
+                          disabled={!codAvailable}
+                          className="h-4 w-4 text-primary-600"
+                        />
+                        <div className="ml-3 flex-1">
+                          <span className="font-medium">Cash on Delivery</span>
+                          {codAvailable ? (
+                            <p className="text-xs text-gray-500 mt-1">Pay when you receive your order</p>
+                          ) : (
+                            <p className="text-xs text-red-500 mt-1">{codUnavailableReason}</p>
+                          )}
+                        </div>
+                        {paymentMethod === 'cod' && codAvailable && <FiCheck className="text-primary-600 w-5 h-5" />}
+                      </label>
+                    )}
+
+                    {!onlineEnabled && !codGlobalEnabled && (
+                      <p className="text-sm text-red-500 text-center py-4">No payment methods available. Please contact support.</p>
+                    )}
                   </div>
-                  {paymentMethod === 'cod' && <FiCheck className="text-primary-600 w-5 h-5" />}
-                </label>
-              </div>
+                );
+              })()}
 
               {/* Security Badge */}
               <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">

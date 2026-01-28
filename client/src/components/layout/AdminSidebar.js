@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FiHome, FiPackage, FiShoppingBag, FiUsers, FiMessageCircle,
-  FiGrid, FiMenu, FiGift, FiBox, FiLayers, FiChevronLeft, FiChevronRight, FiX, FiImage
+  FiGrid, FiMenu, FiGift, FiBox, FiLayers, FiChevronLeft, FiChevronRight, FiX, FiImage, FiCreditCard
 } from 'react-icons/fi';
 
 const adminMenuItems = [
@@ -16,6 +16,7 @@ const adminMenuItems = [
   { title: 'Offers', path: '/admin/offers', icon: FiGift },
   { title: 'Combo Offers', path: '/admin/combo-offers', icon: FiLayers },
   { title: 'Popup Poster', path: '/admin/popup-settings', icon: FiImage },
+  { title: 'Payment Settings', path: '/admin/payment-settings', icon: FiCreditCard },
   { title: 'Treasure Settings', path: '/admin/treasure-settings', icon: FiBox },
 ];
 

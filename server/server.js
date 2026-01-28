@@ -81,6 +81,7 @@ app.use('/api/treasure-config', require('./routes/treasureConfigRoutes'));
 app.use('/api/popup', require('./routes/popupRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/payment-config', require('./routes/paymentConfigRoutes'));
 
 // Dynamic Sitemap for SEO (includes product pages)
 app.get('/sitemap.xml', async (req, res) => {
