@@ -21,9 +21,7 @@ const NavbarSettings = () => {
       // Fetch all categories
       const { data: categoriesData } = await API.get('/categories');
       if (categoriesData.success) {
-        // Filter only global categories (no tenantId)
-        const globalCategories = categoriesData.categories.filter(cat => !cat.tenantId);
-        setAllCategories(globalCategories);
+        setAllCategories(categoriesData.categories);
 
         // Get navbar categories
         try {
