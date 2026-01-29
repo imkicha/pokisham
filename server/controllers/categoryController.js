@@ -321,7 +321,6 @@ exports.getNavbarCategories = async (req, res) => {
     const categories = await Category.find({
       isActive: true,
       showInNavbar: true,
-      tenantId: null, // Only global categories in navbar
     })
       .select('name slug')
       .sort({ navbarOrder: 1, name: 1 });
@@ -354,7 +353,7 @@ exports.updateNavbarCategories = async (req, res) => {
 
     // First, remove all categories from navbar
     await Category.updateMany(
-      { tenantId: null },
+      { showInNavbar: true },
       { showInNavbar: false, navbarOrder: 0 }
     );
 
@@ -369,7 +368,6 @@ exports.updateNavbarCategories = async (req, res) => {
     // Return updated navbar categories
     const navbarCategories = await Category.find({
       showInNavbar: true,
-      tenantId: null,
     })
       .select('name slug navbarOrder')
       .sort({ navbarOrder: 1 });
