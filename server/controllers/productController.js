@@ -206,6 +206,19 @@ exports.createProduct = async (req, res) => {
       productData.hasVariants = productData.hasVariants === 'true';
     }
 
+    // Parse whatsIncluded
+    if (productData.whatsIncluded && typeof productData.whatsIncluded === 'string') {
+      productData.whatsIncluded = productData.whatsIncluded.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    // Parse productType and bookingConfig
+    if (productData.productType === 'booking') {
+      if (productData.bookingConfig && typeof productData.bookingConfig === 'string') {
+        productData.bookingConfig = JSON.parse(productData.bookingConfig);
+      }
+      productData.stock = 9999;
+    }
+
     // Parse variants if they exist
     if (productData.variants && typeof productData.variants === 'string') {
       productData.variants = JSON.parse(productData.variants);
@@ -332,6 +345,19 @@ exports.updateProduct = async (req, res) => {
     // Parse variants if it's a string (from FormData)
     if (productData.variants && typeof productData.variants === 'string') {
       productData.variants = JSON.parse(productData.variants);
+    }
+
+    // Parse whatsIncluded
+    if (productData.whatsIncluded && typeof productData.whatsIncluded === 'string') {
+      productData.whatsIncluded = productData.whatsIncluded.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    // Parse productType and bookingConfig
+    if (productData.productType === 'booking') {
+      if (productData.bookingConfig && typeof productData.bookingConfig === 'string') {
+        productData.bookingConfig = JSON.parse(productData.bookingConfig);
+      }
+      productData.stock = 9999;
     }
 
     // Convert boolean strings to actual booleans

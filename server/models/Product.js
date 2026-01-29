@@ -140,9 +140,36 @@ const productSchema = new mongoose.Schema(
         },
       },
     ],
+    whatsIncluded: [String],
     isActive: {
       type: Boolean,
       default: true,
+    },
+    productType: {
+      type: String,
+      enum: ['standard', 'booking'],
+      default: 'standard',
+    },
+    bookingConfig: {
+      commissionPercentage: {
+        type: Number,
+        default: 10,
+        min: 0,
+        max: 100,
+      },
+      minQuantity: {
+        type: Number,
+        default: 1,
+      },
+      maxQuantity: {
+        type: Number,
+        default: 100,
+      },
+      leadTimeDays: {
+        type: Number,
+        default: 2,
+      },
+      availableCities: [String],
     },
   },
   {

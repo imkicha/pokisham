@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiHeart, FiStar, FiCheck, FiShare2, FiCopy, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiShoppingCart, FiHeart, FiStar, FiCheck, FiShare2, FiCopy, FiX, FiChevronLeft, FiChevronRight, FiCalendar } from 'react-icons/fi';
 import { FaHeart, FaWhatsapp, FaFacebookF, FaTwitter, FaTelegram } from 'react-icons/fa';
 import API from '../../api/axios';
 import { useCart } from '../../context/CartContext';
@@ -8,6 +8,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
+import BookingModal from '../../components/product/BookingModal';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import ProductAccordion from '../../components/product/ProductAccordion';
 import SEO from '../../components/common/SEO';
@@ -30,6 +31,7 @@ const ProductDetail = () => {
   const imageScrollRef = useRef(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -86,6 +88,10 @@ const ProductDetail = () => {
     if (!isAuthenticated) {
       toast.error('Please login to book');
       navigate('/login');
+      return;
+    }
+    if (product.productType === 'booking') {
+      setShowBookingModal(true);
       return;
     }
     addToCart(product._id, quantity, selectedVariant);
@@ -225,6 +231,8 @@ const ProductDetail = () => {
   const currentStock = product.hasVariants && selectedVariant
     ? selectedVariant.stock
     : product.stock;
+
+  const isBookingProduct = product.productType === 'booking';
 
   const breadcrumbs = [
     { label: 'Products', path: '/products' },
@@ -446,20 +454,37 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Stock Status */}
-              <div className="mb-4 md:mb-6">
-                {currentStock > 0 ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <FiCheck className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="font-medium text-sm md:text-base">In Stock ({currentStock} available)</span>
-                  </div>
-                ) : (
-                  <div className="text-red-600 font-medium text-sm md:text-base">Out of Stock</div>
-                )}
-              </div>
+              {/* What's Included */}
+              {product.whatsIncluded && product.whatsIncluded.length > 0 && (
+                <div className="mb-4 md:mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="text-sm font-semibold text-green-800 mb-2">What's Included</h3>
+                  <ul className="space-y-1">
+                    {product.whatsIncluded.map((item, index) => (
+                      <li key={index} className="flex items-center gap-2 text-sm text-gray-700">
+                        <FiCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {/* Quantity */}
-              {currentStock > 0 && (
+              {/* Stock Status - hidden for booking products */}
+              {!isBookingProduct && (
+                <div className="mb-4 md:mb-6">
+                  {currentStock > 0 ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <FiCheck className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="font-medium text-sm md:text-base">In Stock ({currentStock} available)</span>
+                    </div>
+                  ) : (
+                    <div className="text-red-600 font-medium text-sm md:text-base">Out of Stock</div>
+                  )}
+                </div>
+              )}
+
+              {/* Quantity - hidden for booking products */}
+              {!isBookingProduct && currentStock > 0 && (
                 <div className="mb-4 md:mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                   <div className="flex items-center gap-2 md:gap-3">
@@ -482,24 +507,38 @@ const ProductDetail = () => {
 
               {/* Action Buttons */}
               <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
-                {/* Book Now Button */}
-                <button
-                  onClick={handleBookNow}
-                  disabled={currentStock === 0}
-                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transform hover:scale-105 transition-all shadow-lg hover:shadow-xl py-3 md:py-4 text-sm md:text-base"
-                >
-                  <FiCheck className="w-4 h-4 md:w-5 md:h-5" /> Book Now
-                </button>
+                {isBookingProduct ? (
+                  /* Booking Product: single Book Now button */
+                  <button
+                    onClick={handleBookNow}
+                    className="w-full btn-primary flex items-center justify-center gap-2 transform hover:scale-105 transition-all shadow-lg hover:shadow-xl py-3 md:py-4 text-sm md:text-base"
+                  >
+                    <FiCalendar className="w-4 h-4 md:w-5 md:h-5" /> Book Now
+                  </button>
+                ) : (
+                  <>
+                    {/* Standard Product: Book Now + Add to Cart */}
+                    <button
+                      onClick={handleBookNow}
+                      disabled={currentStock === 0}
+                      className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transform hover:scale-105 transition-all shadow-lg hover:shadow-xl py-3 md:py-4 text-sm md:text-base"
+                    >
+                      <FiCheck className="w-4 h-4 md:w-5 md:h-5" /> Book Now
+                    </button>
+                  </>
+                )}
 
                 {/* Add to Cart, Wishlist & Share */}
                 <div className="flex gap-2 md:gap-3">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={currentStock === 0}
-                    className="btn-outline flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 md:gap-2 transform hover:scale-105 transition-transform text-sm md:text-base py-2.5 md:py-3"
-                  >
-                    <FiShoppingCart className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden xs:inline">Add to</span> Cart
-                  </button>
+                  {!isBookingProduct && (
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={currentStock === 0}
+                      className="btn-outline flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 md:gap-2 transform hover:scale-105 transition-transform text-sm md:text-base py-2.5 md:py-3"
+                    >
+                      <FiShoppingCart className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden xs:inline">Add to</span> Cart
+                    </button>
+                  )}
                   <button
                     onClick={handleWishlistToggle}
                     className={`p-2.5 md:p-3 border-2 border-gray-300 rounded-lg hover:border-primary-500 transition-all transform hover:scale-110 ${
@@ -669,6 +708,15 @@ const ProductDetail = () => {
         )}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {isBookingProduct && (
+        <BookingModal
+          product={product}
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
+        />
+      )}
     </>
   );
 };

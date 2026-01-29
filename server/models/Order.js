@@ -68,6 +68,28 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    orderType: {
+      type: String,
+      enum: ['standard', 'booking'],
+      default: 'standard',
+    },
+    bookingDetails: {
+      customerName: String,
+      customerPhone: String,
+      eventDate: Date,
+      quantity: Number,
+      city: String,
+      notes: String,
+    },
+    vendorInfo: {
+      vendorName: String,
+      vendorPhone: String,
+      forwardedAt: Date,
+      forwardedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    },
     shippingAddress: {
       name: {
         type: String,
@@ -145,7 +167,7 @@ const orderSchema = new mongoose.Schema(
     orderStatus: {
       type: String,
       required: true,
-      enum: ['Pending', 'Accepted', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
+      enum: ['Pending', 'Accepted', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Sent to Vendor', 'Confirmed', 'Completed'],
       default: 'Pending',
     },
     statusHistory: [
@@ -183,7 +205,8 @@ orderSchema.pre('save', async function () {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    this.orderNumber = `PK${year}${month}${day}${random}`;
+    const prefix = this.orderType === 'booking' ? 'BK' : 'PK';
+    this.orderNumber = `${prefix}${year}${month}${day}${random}`;
   }
 });
 

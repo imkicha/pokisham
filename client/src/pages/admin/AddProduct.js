@@ -12,6 +12,14 @@ const AddProduct = () => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [productType, setProductType] = useState('standard');
+  const [bookingConfig, setBookingConfig] = useState({
+    commissionPercentage: 10,
+    minQuantity: 1,
+    maxQuantity: 100,
+    leadTimeDays: 2,
+    availableCities: '',
+  });
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState([]);
   const [formData, setFormData] = useState({
@@ -33,6 +41,7 @@ const AddProduct = () => {
     giftWrapAvailable: true,
     requiresCustomPhoto: false,
     isActive: true,
+    whatsIncluded: '',
   });
 
   useEffect(() => {
@@ -131,9 +140,23 @@ const AddProduct = () => {
       formDataToSend.append('discountPrice', formData.discountPrice ? Number(formData.discountPrice) : 0);
       formDataToSend.append('category', formData.category);
       formDataToSend.append('material', formData.material);
-      formDataToSend.append('stock', Number(formData.stock));
-      formDataToSend.append('sku', formData.sku);
+      formDataToSend.append('productType', productType);
+      if (productType === 'booking') {
+        const configToSend = {
+          ...bookingConfig,
+          availableCities: bookingConfig.availableCities
+            ? bookingConfig.availableCities.split(',').map(c => c.trim()).filter(c => c)
+            : [],
+        };
+        formDataToSend.append('bookingConfig', JSON.stringify(configToSend));
+        formDataToSend.append('stock', 9999);
+        formDataToSend.append('sku', `BK-${Date.now()}`);
+      } else {
+        formDataToSend.append('stock', Number(formData.stock));
+        formDataToSend.append('sku', formData.sku);
+      }
       formDataToSend.append('tags', formData.tags);
+      formDataToSend.append('whatsIncluded', formData.whatsIncluded);
       formDataToSend.append('isFeatured', formData.isFeatured);
       formDataToSend.append('isTrending', formData.isTrending);
       formDataToSend.append('giftWrapAvailable', formData.giftWrapAvailable);
@@ -219,6 +242,101 @@ const AddProduct = () => {
               </div>
             )}
           </div>
+
+          {/* Product Type Selector */}
+          <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Product Type</label>
+            <div className="flex gap-4">
+              <label className={`flex-1 flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${productType === 'standard' ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="standard"
+                  checked={productType === 'standard'}
+                  onChange={(e) => setProductType(e.target.value)}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">Standard</span>
+                  <p className="text-xs text-gray-500">Regular product with cart & checkout</p>
+                </div>
+              </label>
+              <label className={`flex-1 flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${productType === 'booking' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="booking"
+                  checked={productType === 'booking'}
+                  onChange={(e) => setProductType(e.target.value)}
+                  className="h-4 w-4 text-orange-600 focus:ring-orange-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">Booking</span>
+                  <p className="text-xs text-gray-500">Book Now flow with event date & vendor</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Booking Config - shown only for booking products */}
+          {productType === 'booking' && (
+            <div className="p-4 border-2 border-orange-200 rounded-lg bg-orange-50 space-y-4">
+              <h3 className="text-sm font-semibold text-orange-800">Booking Configuration</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Commission %</label>
+                  <input
+                    type="number"
+                    value={bookingConfig.commissionPercentage}
+                    onChange={(e) => setBookingConfig({ ...bookingConfig, commissionPercentage: Number(e.target.value) })}
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Lead Time (days)</label>
+                  <input
+                    type="number"
+                    value={bookingConfig.leadTimeDays}
+                    onChange={(e) => setBookingConfig({ ...bookingConfig, leadTimeDays: Number(e.target.value) })}
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Min Quantity</label>
+                  <input
+                    type="number"
+                    value={bookingConfig.minQuantity}
+                    onChange={(e) => setBookingConfig({ ...bookingConfig, minQuantity: Number(e.target.value) })}
+                    min="1"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Max Quantity</label>
+                  <input
+                    type="number"
+                    value={bookingConfig.maxQuantity}
+                    onChange={(e) => setBookingConfig({ ...bookingConfig, maxQuantity: Number(e.target.value) })}
+                    min="1"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Available Cities (comma separated, leave empty for all)</label>
+                <input
+                  type="text"
+                  value={bookingConfig.availableCities}
+                  onChange={(e) => setBookingConfig({ ...bookingConfig, availableCities: e.target.value })}
+                  placeholder="e.g., Hyderabad, Bangalore, Chennai"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Product Name*</label>
@@ -387,7 +505,7 @@ const AddProduct = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${productType === 'booking' ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Material</label>
               <input
@@ -400,33 +518,37 @@ const AddProduct = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Stock*</label>
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                required
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                placeholder="0"
-              />
-            </div>
+            {productType !== 'booking' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock*</label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="0"
+                />
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">SKU*</label>
-            <input
-              type="text"
-              name="sku"
-              value={formData.sku}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="e.g., POT-001"
-            />
-          </div>
+          {productType !== 'booking' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">SKU*</label>
+              <input
+                type="text"
+                name="sku"
+                value={formData.sku}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                placeholder="e.g., POT-001"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -440,6 +562,22 @@ const AddProduct = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
               placeholder="e.g., handmade, eco-friendly, festival"
             />
+          </div>
+
+          {/* What's Included */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              What's Included (comma separated)
+            </label>
+            <input
+              type="text"
+              name="whatsIncluded"
+              value={formData.whatsIncluded}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+              placeholder="e.g., Fresh flowers, Mango leaves, Thread, Setup"
+            />
+            <p className="text-xs text-gray-500 mt-1">List items that are included with this product</p>
           </div>
 
           {/* Variants Section */}

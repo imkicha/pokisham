@@ -350,6 +350,10 @@ exports.getAllOrders = async (req, res) => {
       queryObj.paymentMethod = req.query.paymentMethod;
     }
 
+    if (req.query.orderType) {
+      queryObj.orderType = req.query.orderType;
+    }
+
     const orders = await Order.find(queryObj)
       .populate('user', 'name email phone')
       .sort({ createdAt: -1 })
@@ -396,7 +400,7 @@ exports.updateOrderStatus = async (req, res) => {
       message: message || `Order status updated to ${status}`,
     });
 
-    if (status === 'Delivered') {
+    if (status === 'Delivered' || status === 'Completed') {
       order.deliveredAt = Date.now();
     }
 
@@ -404,19 +408,21 @@ exports.updateOrderStatus = async (req, res) => {
       order.cancelledAt = Date.now();
       order.cancellationReason = message;
 
-      // Restore product stock
-      for (const item of order.orderItems) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          if (product.hasVariants && item.variant) {
-            const variant = product.variants.find((v) => v.size === item.variant.size);
-            if (variant) {
-              variant.stock += item.quantity;
+      // Restore product stock (skip for booking orders)
+      if (order.orderType !== 'booking') {
+        for (const item of order.orderItems) {
+          const product = await Product.findById(item.product);
+          if (product) {
+            if (product.hasVariants && item.variant) {
+              const variant = product.variants.find((v) => v.size === item.variant.size);
+              if (variant) {
+                variant.stock += item.quantity;
+              }
+            } else {
+              product.stock += item.quantity;
             }
-          } else {
-            product.stock += item.quantity;
+            await product.save();
           }
-          await product.save();
         }
       }
     }
@@ -475,19 +481,21 @@ exports.cancelOrder = async (req, res) => {
       message: reason || 'Cancelled by user',
     });
 
-    // Restore product stock
-    for (const item of order.orderItems) {
-      const product = await Product.findById(item.product);
-      if (product) {
-        if (product.hasVariants && item.variant) {
-          const variant = product.variants.find((v) => v.size === item.variant.size);
-          if (variant) {
-            variant.stock += item.quantity;
+    // Restore product stock (skip for booking orders)
+    if (order.orderType !== 'booking') {
+      for (const item of order.orderItems) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          if (product.hasVariants && item.variant) {
+            const variant = product.variants.find((v) => v.size === item.variant.size);
+            if (variant) {
+              variant.stock += item.quantity;
+            }
+          } else {
+            product.stock += item.quantity;
           }
-        } else {
-          product.stock += item.quantity;
+          await product.save();
         }
-        await product.save();
       }
     }
 
@@ -517,6 +525,8 @@ exports.getDashboardStats = async (req, res) => {
 
     const pendingOrders = await Order.countDocuments({ orderStatus: 'Pending' });
     const deliveredOrders = await Order.countDocuments({ orderStatus: 'Delivered' });
+    const totalBookingOrders = await Order.countDocuments({ orderType: 'booking' });
+    const pendingBookingOrders = await Order.countDocuments({ orderType: 'booking', orderStatus: 'Pending' });
 
     const revenueData = await Order.aggregate([
       { $match: { orderStatus: { $ne: 'Cancelled' } } },
@@ -551,6 +561,8 @@ exports.getDashboardStats = async (req, res) => {
         pendingOrders,
         deliveredOrders,
         totalRevenue,
+        totalBookingOrders,
+        pendingBookingOrders,
         lowStockProducts,
         popularProducts,
         recentOrders,
@@ -747,6 +759,234 @@ exports.shareInvoice = async (req, res) => {
     });
   } catch (error) {
     console.error('Share invoice error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Create booking order
+// @route   POST /api/orders/booking
+// @access  Private
+exports.createBookingOrder = async (req, res) => {
+  try {
+    const { productId, customerName, customerPhone, eventDate, quantity, city, notes } = req.body;
+
+    // Validate required fields
+    if (!productId || !customerName || !customerPhone || !eventDate || !quantity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: productId, customerName, customerPhone, eventDate, quantity',
+      });
+    }
+
+    // Validate product exists and is a booking product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    if (product.productType !== 'booking') {
+      return res.status(400).json({ success: false, message: 'This product does not support booking' });
+    }
+
+    const config = product.bookingConfig || {};
+
+    // Validate event date (must be at least leadTimeDays from today)
+    const leadTimeDays = config.leadTimeDays || 2;
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + leadTimeDays);
+    minDate.setHours(0, 0, 0, 0);
+    const eventDateObj = new Date(eventDate);
+    if (eventDateObj < minDate) {
+      return res.status(400).json({
+        success: false,
+        message: `Event date must be at least ${leadTimeDays} days from today`,
+      });
+    }
+
+    // Validate quantity
+    const minQty = config.minQuantity || 1;
+    const maxQty = config.maxQuantity || 100;
+    if (quantity < minQty || quantity > maxQty) {
+      return res.status(400).json({
+        success: false,
+        message: `Quantity must be between ${minQty} and ${maxQty}`,
+      });
+    }
+
+    // Validate city if availableCities is set
+    if (config.availableCities && config.availableCities.length > 0 && city) {
+      const cityLower = city.toLowerCase();
+      const validCity = config.availableCities.some(c => c.toLowerCase() === cityLower);
+      if (!validCity) {
+        return res.status(400).json({
+          success: false,
+          message: `Service not available in ${city}. Available cities: ${config.availableCities.join(', ')}`,
+        });
+      }
+    }
+
+    // Calculate pricing
+    const unitPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+    const totalPrice = unitPrice * quantity;
+    const commissionPercentage = config.commissionPercentage || 10;
+    const platformCommission = Math.round((totalPrice * commissionPercentage / 100) * 100) / 100;
+    const vendorEarnings = Math.round((totalPrice - platformCommission) * 100) / 100;
+
+    const order = await Order.create({
+      user: req.user._id,
+      orderType: 'booking',
+      orderItems: [
+        {
+          product: product._id,
+          name: product.name,
+          quantity,
+          image: product.images[0]?.url || '',
+          price: unitPrice,
+        },
+      ],
+      bookingDetails: {
+        customerName,
+        customerPhone,
+        eventDate: eventDateObj,
+        quantity,
+        city: city || '',
+        notes: notes || '',
+      },
+      shippingAddress: {
+        name: customerName,
+        phone: customerPhone,
+        addressLine1: city || 'Booking Order',
+        city: city || 'N/A',
+        state: 'N/A',
+        pincode: '000000',
+      },
+      paymentMethod: 'COD',
+      paymentInfo: { status: 'pending' },
+      itemsPrice: totalPrice,
+      taxPrice: 0,
+      shippingPrice: 0,
+      totalPrice,
+      platformCommission,
+      tenantEarnings: vendorEarnings,
+      orderStatus: 'Pending',
+      statusHistory: [
+        {
+          status: 'Pending',
+          message: 'Booking order placed successfully',
+        },
+      ],
+    });
+
+    // Send notifications
+    try {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        if (user.email) {
+          await sendOrderConfirmation(user.email, user.name, order);
+        }
+        const phoneNumber = user.phone || customerPhone;
+        await sendOrderConfirmationSMS(
+          phoneNumber,
+          user.name,
+          order.orderNumber,
+          order.totalPrice,
+          user.fcmToken || null
+        );
+        const admins = await User.find({
+          role: { $in: ['admin', 'superadmin'] },
+          fcmToken: { $ne: '' }
+        }).select('fcmToken');
+        const adminTokens = admins.map(a => a.fcmToken).filter(Boolean);
+        if (adminTokens.length > 0) {
+          await sendNewOrderNotificationToAdmins(adminTokens, user.name, order.orderNumber, order.totalPrice);
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send booking notifications:', notificationError);
+    }
+
+    res.status(201).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.error('Create Booking Order Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Forward booking order to vendor via WhatsApp
+// @route   POST /api/orders/:id/forward-vendor
+// @access  Private/Admin
+exports.forwardToVendor = async (req, res) => {
+  try {
+    const { vendorName, vendorPhone } = req.body;
+
+    if (!vendorName || !vendorPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide vendorName and vendorPhone',
+      });
+    }
+
+    const order = await Order.findById(req.params.id).populate('user', 'name phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.orderType !== 'booking') {
+      return res.status(400).json({ success: false, message: 'This is not a booking order' });
+    }
+
+    // Update vendor info
+    order.vendorInfo = {
+      vendorName,
+      vendorPhone,
+      forwardedAt: new Date(),
+      forwardedBy: req.user._id,
+    };
+    order.orderStatus = 'Sent to Vendor';
+    order.statusHistory.push({
+      status: 'Sent to Vendor',
+      message: `Order forwarded to vendor: ${vendorName}`,
+    });
+
+    await order.save();
+
+    // Build WhatsApp message
+    const bd = order.bookingDetails || {};
+    const eventDateStr = bd.eventDate ? new Date(bd.eventDate).toLocaleDateString('en-IN') : 'N/A';
+    const productImage = order.orderItems[0]?.image || '';
+
+    const message = `*New Booking Order - ${order.orderNumber}*\n\n` +
+      `Product: ${order.orderItems[0]?.name || 'N/A'}\n` +
+      `Quantity: ${bd.quantity || 'N/A'}\n` +
+      `Event Date: ${eventDateStr}\n` +
+      `City: ${bd.city || 'N/A'}\n` +
+      `Customer: ${bd.customerName || 'N/A'}\n` +
+      `Phone: ${bd.customerPhone || 'N/A'}\n` +
+      `Total: Rs.${order.totalPrice}\n` +
+      (bd.notes ? `Notes: ${bd.notes}\n` : '') +
+      (productImage ? `\nProduct Image: ${productImage}\n` : '') +
+      `\nPlease confirm availability.`;
+
+    const cleanPhone = vendorPhone.replace(/[^0-9]/g, '');
+    const whatsappPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+    const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+
+    res.status(200).json({
+      success: true,
+      order,
+      whatsappUrl,
+    });
+  } catch (error) {
+    console.error('Forward to vendor error:', error);
     res.status(500).json({
       success: false,
       message: error.message,

@@ -14,6 +14,8 @@ const {
   getNotificationTemplates,
   sendOrderNotification,
   shareInvoice,
+  createBookingOrder,
+  forwardToVendor,
 } = require('../controllers/orderController');
 const {
   assignOrderToTenant,
@@ -29,6 +31,7 @@ router.route('/').post(protect, createOrder).get(protect, isAdminOrSuperAdmin, g
 router.get('/myorders', protect, getMyOrders);
 router.get('/admin/stats', protect, isAdminOrSuperAdmin, getDashboardStats);
 router.get('/notification-templates', protect, isAdminOrSuperAdmin, getNotificationTemplates);
+router.post('/booking', protect, createBookingOrder);
 
 // Tenant order routes
 router.get('/my-orders', protect, getTenantOrders); // Tenant gets their assigned orders
@@ -37,6 +40,7 @@ router.post('/:id/accept', protect, acceptOrder); // Tenant accepts/claims a bro
 
 // IMPORTANT: More specific routes must come BEFORE generic routes
 router.put('/:id/tenant-status', protect, updateTenantOrderStatus); // Tenant updates order status
+router.post('/:id/forward-vendor', protect, isAdminOrSuperAdmin, forwardToVendor);
 router.put('/:id/status', protect, isAdminOrSuperAdmin, updateOrderStatus); // Admin/SuperAdmin updates order status
 router.put('/:id/cancel', protect, cancelOrder);
 

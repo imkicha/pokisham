@@ -12,15 +12,21 @@ const OrdersManagement = () => {
   const [sendingNotification, setSendingNotification] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [sharingInvoice, setSharingInvoice] = useState(false);
+  const [orderTypeFilter, setOrderTypeFilter] = useState('all');
+  const [vendorName, setVendorName] = useState('');
+  const [vendorPhone, setVendorPhone] = useState('');
+  const [forwardingToVendor, setForwardingToVendor] = useState(false);
 
   useEffect(() => {
     document.title = 'Orders Management - Pokisham Admin';
     fetchOrders();
-  }, []);
+  }, [orderTypeFilter]);
 
   const fetchOrders = async () => {
     try {
-      const { data } = await API.get('/orders');
+      const params = {};
+      if (orderTypeFilter !== 'all') params.orderType = orderTypeFilter;
+      const { data } = await API.get('/orders', { params });
       if (data.success) {
         setOrders(data.orders);
       }
@@ -29,6 +35,32 @@ const OrdersManagement = () => {
       toast.error(error.response?.data?.message || 'Failed to fetch orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForwardToVendor = async (orderId) => {
+    if (!vendorName || !vendorPhone) {
+      toast.error('Please enter vendor name and phone');
+      return;
+    }
+    setForwardingToVendor(true);
+    try {
+      const { data } = await API.post(`/orders/${orderId}/forward-vendor`, {
+        vendorName,
+        vendorPhone,
+      });
+      if (data.success) {
+        window.open(data.whatsappUrl, '_blank');
+        toast.success('WhatsApp opened - send the message to vendor!');
+        setSelectedOrder(data.order);
+        setVendorName('');
+        setVendorPhone('');
+        fetchOrders();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to forward to vendor');
+    } finally {
+      setForwardingToVendor(false);
     }
   };
 
@@ -118,10 +150,16 @@ const OrdersManagement = () => {
     const statusLower = status?.toLowerCase() || '';
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
+      accepted: 'bg-blue-100 text-blue-800',
       processing: 'bg-blue-100 text-blue-800',
+      packed: 'bg-indigo-100 text-indigo-800',
       shipped: 'bg-purple-100 text-purple-800',
+      'out for delivery': 'bg-orange-100 text-orange-800',
       delivered: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
+      'sent to vendor': 'bg-indigo-100 text-indigo-800',
+      confirmed: 'bg-teal-100 text-teal-800',
+      completed: 'bg-green-100 text-green-800',
     };
     return colors[statusLower] || 'bg-gray-100 text-gray-800';
   };
@@ -154,6 +192,29 @@ const OrdersManagement = () => {
         <h1 className="text-2xl md:text-4xl font-display font-bold text-gray-900 mb-4 md:mb-8">
           Orders Management
         </h1>
+
+        {/* Order Type Filter Tabs */}
+        <div className="flex gap-2 mb-4 md:mb-6">
+          {[
+            { key: 'all', label: 'All Orders' },
+            { key: 'standard', label: 'Standard' },
+            { key: 'booking', label: 'Bookings' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => { setLoading(true); setOrderTypeFilter(tab.key); }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                orderTypeFilter === tab.key
+                  ? tab.key === 'booking'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-lg shadow-md overflow-hidden">
@@ -195,8 +256,11 @@ const OrdersManagement = () => {
                   orders.map((order) => (
                     <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                           #{order.orderNumber || order._id.slice(-8)}
+                          {order.orderType === 'booking' && (
+                            <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-700">Booking</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -268,6 +332,9 @@ const OrdersManagement = () => {
                     <span className="font-semibold text-gray-900">
                       #{order.orderNumber || order._id.slice(-8)}
                     </span>
+                    {order.orderType === 'booking' && (
+                      <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-700">Booking</span>
+                    )}
                   </div>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
@@ -365,18 +432,105 @@ const OrdersManagement = () => {
                   <p className="text-gray-600 text-sm">{selectedOrder.shippingAddress?.phone}</p>
                 </div>
 
-                {/* Shipping Address */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-base md:text-lg font-semibold mb-2">Shipping Address</h3>
-                  <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.addressLine1}</p>
-                  {selectedOrder.shippingAddress?.addressLine2 && (
-                    <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress.addressLine2}</p>
-                  )}
-                  <p className="text-gray-700 text-sm">
-                    {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state}
-                  </p>
-                  <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.pincode}</p>
-                </div>
+                {/* Booking Details - shown for booking orders */}
+                {selectedOrder.orderType === 'booking' && selectedOrder.bookingDetails && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-2 text-orange-800">Booking Details</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-600">Customer:</span>
+                        <p className="font-medium">{selectedOrder.bookingDetails.customerName}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Phone:</span>
+                        <p className="font-medium">{selectedOrder.bookingDetails.customerPhone}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Event Date:</span>
+                        <p className="font-medium">{formatDate(selectedOrder.bookingDetails.eventDate)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Quantity:</span>
+                        <p className="font-medium">{selectedOrder.bookingDetails.quantity}</p>
+                      </div>
+                      {selectedOrder.bookingDetails.city && (
+                        <div>
+                          <span className="text-gray-600">City:</span>
+                          <p className="font-medium">{selectedOrder.bookingDetails.city}</p>
+                        </div>
+                      )}
+                      {selectedOrder.bookingDetails.notes && (
+                        <div className="col-span-2">
+                          <span className="text-gray-600">Notes:</span>
+                          <p className="font-medium">{selectedOrder.bookingDetails.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vendor Info - shown if vendor assigned */}
+                {selectedOrder.orderType === 'booking' && selectedOrder.vendorInfo?.vendorName && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-2 text-indigo-800">Vendor Info</h3>
+                    <div className="text-sm">
+                      <p><span className="text-gray-600">Vendor:</span> <span className="font-medium">{selectedOrder.vendorInfo.vendorName}</span></p>
+                      <p><span className="text-gray-600">Phone:</span> <span className="font-medium">{selectedOrder.vendorInfo.vendorPhone}</span></p>
+                      {selectedOrder.vendorInfo.forwardedAt && (
+                        <p><span className="text-gray-600">Forwarded:</span> <span className="font-medium">{formatDate(selectedOrder.vendorInfo.forwardedAt)}</span></p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Forward to Vendor - shown for booking orders */}
+                {selectedOrder.orderType === 'booking' && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2">
+                      <FaWhatsapp className="text-green-600" />
+                      Forward to Vendor
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <input
+                        type="text"
+                        value={vendorName}
+                        onChange={(e) => setVendorName(e.target.value)}
+                        placeholder="Vendor Name"
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <input
+                        type="tel"
+                        value={vendorPhone}
+                        onChange={(e) => setVendorPhone(e.target.value)}
+                        placeholder="Vendor Phone"
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleForwardToVendor(selectedOrder._id)}
+                      disabled={forwardingToVendor}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    >
+                      <FaWhatsapp className="w-4 h-4" />
+                      {forwardingToVendor ? 'Forwarding...' : 'Send via WhatsApp'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Shipping Address - hidden for booking orders */}
+                {selectedOrder.orderType !== 'booking' && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-2">Shipping Address</h3>
+                    <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.addressLine1}</p>
+                    {selectedOrder.shippingAddress?.addressLine2 && (
+                      <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress.addressLine2}</p>
+                    )}
+                    <p className="text-gray-700 text-sm">
+                      {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state}
+                    </p>
+                    <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.pincode}</p>
+                  </div>
+                )}
 
                 {/* Order Items */}
                 <div>
@@ -416,11 +570,27 @@ const OrdersManagement = () => {
                     onChange={(e) => handleStatusUpdate(selectedOrder._id, e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm md:text-base"
                   >
-                    <option value="Pending">Pending</option>
-                    <option value="Processing">Processing</option>
-                    <option value="Shipped">Shipped</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Cancelled">Cancelled</option>
+                    {selectedOrder.orderType === 'booking' ? (
+                      <>
+                        <option value="Pending">Pending</option>
+                        <option value="Accepted">Accepted</option>
+                        <option value="Sent to Vendor">Sent to Vendor</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Pending">Pending</option>
+                        <option value="Accepted">Accepted</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Packed">Packed</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

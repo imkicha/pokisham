@@ -51,7 +51,8 @@ module.exports = {
         'slide-up': 'slideUp 0.6s ease-out',
         'scale-in': 'scaleIn 0.4s ease-out',
         'slide-right': 'slideRight 0.3s ease-out',
-        'confetti-fall': 'confettiFall 3s ease-in-out infinite',
+        'confetti-fall': 'confettiFall var(--duration, 2s) ease-out forwards',
+        'bounce-in': 'bounceIn 0.6s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -71,11 +72,14 @@ module.exports = {
           '100%': { transform: 'translateX(0)' },
         },
         confettiFall: {
-          '0%': { transform: 'translateY(0) rotate(0deg)', opacity: '0.8' },
-          '25%': { transform: 'translateY(15px) rotate(90deg)', opacity: '1' },
-          '50%': { transform: 'translateY(5px) rotate(180deg)', opacity: '0.9' },
-          '75%': { transform: 'translateY(20px) rotate(270deg)', opacity: '1' },
-          '100%': { transform: 'translateY(0) rotate(360deg)', opacity: '0.8' },
+          '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(400px) translateX(var(--drift, 0px)) rotate(var(--rotation, 360deg))', opacity: '0' },
+        },
+        bounceIn: {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '50%': { transform: 'scale(1.2)' },
+          '70%': { transform: 'scale(0.9)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
     },
