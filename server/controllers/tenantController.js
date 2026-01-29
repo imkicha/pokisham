@@ -357,10 +357,32 @@ exports.updateTenant = async (req, res) => {
       });
     }
 
+    // Track if email or phone changed
+    const oldEmail = tenant.email;
+    const oldPhone = tenant.phone;
+    const oldName = tenant.ownerName;
+
     tenant = await Tenant.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
+
+    // Sync updated fields to the linked User account so tenant can login with new credentials
+    if (tenant.userId) {
+      const userUpdate = {};
+      if (req.body.email && req.body.email !== oldEmail) {
+        userUpdate.email = req.body.email;
+      }
+      if (req.body.phone && req.body.phone !== oldPhone) {
+        userUpdate.phone = req.body.phone;
+      }
+      if (req.body.ownerName && req.body.ownerName !== oldName) {
+        userUpdate.name = req.body.ownerName;
+      }
+      if (Object.keys(userUpdate).length > 0) {
+        await User.findByIdAndUpdate(tenant.userId, userUpdate);
+      }
+    }
 
     res.status(200).json({
       success: true,
