@@ -25,13 +25,23 @@ const app = express();
 app.set('trust proxy', 1);
 
 // CORS with security - MUST be first before other middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://136.185.19.6",
+  "http://136.185.19.6:3000",
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [
-      "http://136.185.19.6",
-      "http://136.185.19.6:3000",
-      "http://localhost:3000"
-    ],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, origin);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
