@@ -176,7 +176,7 @@ const ProductsPage = () => {
         </div>
 
         {/* Filter & Sort Bar */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           {/* Desktop filters */}
           <div className="hidden md:flex items-center gap-3 flex-wrap">
             {/* Sort */}
@@ -246,139 +246,196 @@ const ProductsPage = () => {
             )}
           </div>
 
-          {/* Mobile filter bar */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700"
-            >
-              <FiFilter className="w-4 h-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="bg-primary-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {(sortOption ? 1 : 0) + (selectedCategory ? 1 : 0) + (appliedMinPrice || appliedMaxPrice ? 1 : 0)}
-                </span>
-              )}
-            </button>
-
-            {/* Sort dropdown always visible on mobile */}
-            <div className="relative flex-1">
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          {/* Mobile: compact inline bar */}
+          <div className="md:hidden">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(true)}
+                className={`flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  hasActiveFilters
+                    ? 'bg-primary-50 border-primary-300 text-primary-700'
+                    : 'bg-white border-gray-300 text-gray-600'
+                }`}
               >
-                <option value="">Sort by: Default</option>
-                <option value="latest">Newest First</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-              </select>
-              <FiChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+                <FiFilter className="w-3.5 h-3.5" />
+                Filter
+                {hasActiveFilters && (
+                  <span className="bg-primary-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                    {(selectedCategory ? 1 : 0) + (appliedMinPrice || appliedMaxPrice ? 1 : 0)}
+                  </span>
+                )}
+              </button>
 
-            {!loading && (
-              <span className="text-xs text-gray-500 whitespace-nowrap">{totalCount}</span>
-            )}
+              {/* Sort as pill */}
+              <div className="relative flex-1">
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value)}
+                  className="w-full appearance-none bg-white border border-gray-300 rounded-full px-3 py-1.5 pr-7 text-xs font-medium text-gray-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Sort: Default</option>
+                  <option value="latest">Newest</option>
+                  <option value="price_asc">Price: Low-High</option>
+                  <option value="price_desc">Price: High-Low</option>
+                </select>
+                <FiChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              </div>
+
+              {!loading && (
+                <span className="text-[11px] text-gray-400 whitespace-nowrap">{totalCount} items</span>
+              )}
+            </div>
           </div>
 
-          {/* Mobile expanded filters */}
+          {/* Mobile bottom sheet overlay */}
           {showFilters && (
-            <div className="md:hidden mt-3 p-4 bg-gray-50 rounded-lg space-y-3 animate-fade-in">
-              {/* Category */}
-              {!categorySlug && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
-                  <div className="relative">
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">All Categories</option>
-                      {categories.map((cat) => (
-                        <option key={cat._id} value={cat.slug}>{cat.name}</option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <div className="md:hidden fixed inset-0 z-50">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setShowFilters(false)}
+              />
+              {/* Sheet */}
+              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl max-h-[70vh] overflow-y-auto animate-sheet-up">
+                {/* Handle bar */}
+                <div className="flex justify-center pt-3 pb-1">
+                  <div className="w-10 h-1 bg-gray-300 rounded-full" />
+                </div>
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                  <h3 className="text-base font-semibold text-gray-900">Filters</h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="p-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-5">
+                  {/* Category */}
+                  {!categorySlug && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-800 mb-2">Category</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setSelectedCategory('')}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            !selectedCategory
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'bg-white text-gray-600 border-gray-300'
+                          }`}
+                        >
+                          All
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat._id}
+                            onClick={() => setSelectedCategory(cat.slug)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              selectedCategory === cat.slug
+                                ? 'bg-primary-600 text-white border-primary-600'
+                                : 'bg-white text-gray-600 border-gray-300'
+                            }`}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">Price Range</label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                        <input
+                          type="number"
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={(e) => setMinPrice(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <span className="text-gray-300">—</span>
+                      <div className="flex-1 relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                        <input
+                          type="number"
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={(e) => setMaxPrice(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Price range */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Price Range</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min ₹"
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                  <span className="text-gray-400 text-sm">to</span>
-                  <input
-                    type="number"
-                    placeholder="Max ₹"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
+                {/* Bottom actions */}
+                <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3">
                   <button
-                    onClick={handleApplyPrice}
-                    className="bg-primary-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                    onClick={() => {
+                      clearAllFilters();
+                      setShowFilters(false);
+                    }}
+                    className="flex-1 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    Go
+                    Clear All
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleApplyPrice();
+                      setShowFilters(false);
+                    }}
+                    className="flex-1 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors"
+                  >
+                    Apply Filters
                   </button>
                 </div>
               </div>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="text-sm text-primary-600 font-medium hover:underline"
-                >
-                  Clear All Filters
-                </button>
-              )}
             </div>
           )}
 
           {/* Active filter chips */}
           {hasActiveFilters && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3 flex-wrap">
               {sortOption && (
-                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-xs sm:text-sm px-3 py-1 rounded-full">
-                  {sortOption === 'latest' ? 'Newest' : sortOption === 'price_asc' ? 'Price: Low-High' : 'Price: High-Low'}
+                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-[11px] sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                  {sortOption === 'latest' ? 'Newest' : sortOption === 'price_asc' ? 'Low-High' : 'High-Low'}
                   <button onClick={() => setSortOption('')} className="hover:text-primary-900">
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </span>
               )}
               {selectedCategory && (
-                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-xs sm:text-sm px-3 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-[11px] sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
                   {selectedCategoryName}
                   <button onClick={clearCategoryFilter} className="hover:text-primary-900">
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </span>
               )}
               {(appliedMinPrice || appliedMaxPrice) && (
-                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-xs sm:text-sm px-3 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-[11px] sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
                   {appliedMinPrice && appliedMaxPrice
                     ? `₹${appliedMinPrice} – ₹${appliedMaxPrice}`
                     : appliedMinPrice
                     ? `From ₹${appliedMinPrice}`
                     : `Up to ₹${appliedMaxPrice}`}
                   <button onClick={clearPriceFilter} className="hover:text-primary-900">
-                    <FiX className="w-3.5 h-3.5" />
+                    <FiX className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </span>
               )}
               <button
                 onClick={clearAllFilters}
-                className="hidden md:inline text-xs sm:text-sm text-gray-500 hover:text-gray-700 underline"
+                className="text-[11px] sm:text-sm text-gray-400 hover:text-gray-600 underline"
               >
-                Clear all
+                Clear
               </button>
             </div>
           )}

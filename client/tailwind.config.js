@@ -49,6 +49,7 @@ module.exports = {
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',
         'slide-up': 'slideUp 0.6s ease-out',
+        'sheet-up': 'sheetUp 0.3s ease-out',
         'scale-in': 'scaleIn 0.4s ease-out',
         'slide-right': 'slideRight 0.3s ease-out',
         'confetti-fall': 'confettiFall var(--duration, 2s) ease-out forwards',
@@ -74,6 +75,10 @@ module.exports = {
         confettiFall: {
           '0%': { transform: 'translateY(0) translateX(0) rotate(0deg)', opacity: '1' },
           '100%': { transform: 'translateY(400px) translateX(var(--drift, 0px)) rotate(var(--rotation, 360deg))', opacity: '0' },
+        },
+        sheetUp: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
         },
         bounceIn: {
           '0%': { transform: 'scale(0)', opacity: '0' },
