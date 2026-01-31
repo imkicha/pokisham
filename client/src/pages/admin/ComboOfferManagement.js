@@ -53,6 +53,7 @@ const ComboOfferManagement = () => {
     badge: 'COMBO',
     isActive: true,
   });
+  const [pricingMode, setPricingMode] = useState('fixed_discount'); // 'fixed_discount' or 'fixed_price'
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -117,6 +118,7 @@ const ComboOfferManagement = () => {
         comboProducts: combo.comboProducts?.map(cp => ({
           product: cp.product?._id || cp.product,
           quantity: cp.quantity || 1,
+          variant: cp.variant || { size: '' },
         })) || [],
         comboPrice: combo.comboPrice || 0,
         applicableCategories: combo.applicableCategories?.map(c => c._id || c) || [],
@@ -135,6 +137,8 @@ const ComboOfferManagement = () => {
         isActive: combo.isActive,
       });
       setImagePreview(combo.image || '');
+      // Set pricing mode based on existing data
+      setPricingMode(combo.comboPrice > 0 && !combo.discountValue ? 'fixed_price' : 'fixed_discount');
     } else {
       setEditingCombo(null);
       const today = new Date().toISOString().split('T')[0];
@@ -161,6 +165,7 @@ const ComboOfferManagement = () => {
         isActive: true,
       });
       setImagePreview('');
+      setPricingMode('fixed_discount');
     }
     setImageFile(null);
     setProductSearch('');
@@ -192,9 +197,11 @@ const ComboOfferManagement = () => {
       toast.error('Product already added');
       return;
     }
+    const product = products.find(p => p._id === productId);
+    const defaultVariant = { size: '' };
     setFormData({
       ...formData,
-      comboProducts: [...formData.comboProducts, { product: productId, quantity: 1 }],
+      comboProducts: [...formData.comboProducts, { product: productId, quantity: 1, variant: defaultVariant }],
     });
     setProductSearch('');
   };
@@ -215,6 +222,15 @@ const ComboOfferManagement = () => {
     });
   };
 
+  const handleProductVariantChange = (productId, size) => {
+    setFormData({
+      ...formData,
+      comboProducts: formData.comboProducts.map(p =>
+        p.product === productId ? { ...p, variant: { size } } : p
+      ),
+    });
+  };
+
   const handleCategoryChange = (categoryId) => {
     const currentCategories = formData.applicableCategories;
     if (currentCategories.includes(categoryId)) {
@@ -230,12 +246,19 @@ const ComboOfferManagement = () => {
     }
   };
 
+  const getProductPrice = (product, variantInfo) => {
+    if (product.hasVariants && variantInfo?.size && product.variants?.length > 0) {
+      const variant = product.variants.find(v => v.size === variantInfo.size);
+      if (variant) return variant.price;
+    }
+    return product.discountPrice || product.price;
+  };
+
   const calculateOriginalPrice = () => {
     return formData.comboProducts.reduce((total, cp) => {
       const product = products.find(p => p._id === cp.product);
       if (product) {
-        const price = product.discountPrice || product.price;
-        return total + (price * cp.quantity);
+        return total + (getProductPrice(product, cp.variant) * cp.quantity);
       }
       return total;
     }, 0);
@@ -257,6 +280,17 @@ const ComboOfferManagement = () => {
     if (formData.comboType === 'fixed_products' && formData.comboProducts.length < 2) {
       toast.error('Please add at least 2 products for fixed combo');
       return;
+    }
+
+    if (formData.comboType === 'fixed_products') {
+      if (pricingMode === 'fixed_discount' && formData.discountValue <= 0) {
+        toast.error('Please enter a discount amount greater than 0');
+        return;
+      }
+      if (pricingMode === 'fixed_price' && formData.comboPrice <= 0) {
+        toast.error('Please enter a combo price greater than 0');
+        return;
+      }
     }
 
     if (formData.comboType === 'category_combo' && formData.applicableCategories.length === 0) {
@@ -484,7 +518,11 @@ const ComboOfferManagement = () => {
                       </div>
                       {combo.comboType === 'fixed_products' && (
                         <p className="text-primary-600 font-bold">
-                          Combo Price: ₹{combo.comboPrice.toLocaleString('en-IN')}
+                          {combo.discountValue > 0
+                            ? `Save ₹${combo.discountValue.toLocaleString('en-IN')} per set`
+                            : combo.comboPrice > 0
+                            ? `Bundle at ₹${combo.comboPrice.toLocaleString('en-IN')}`
+                            : 'No pricing set'}
                         </p>
                       )}
                       {combo.comboType === 'category_combo' && (
@@ -696,9 +734,23 @@ const ComboOfferManagement = () => {
                                 {product.images?.[0]?.url && (
                                   <img src={product.images[0].url} alt="" className="w-12 h-12 object-cover rounded" />
                                 )}
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <p className="font-medium text-sm">{product.name}</p>
-                                  <p className="text-xs text-gray-500">₹{product.discountPrice || product.price}</p>
+                                  <p className="text-xs text-gray-500">₹{getProductPrice(product, cp.variant)}</p>
+                                  {product.hasVariants && product.variants?.length > 0 && (
+                                    <select
+                                      value={cp.variant?.size || ''}
+                                      onChange={(e) => handleProductVariantChange(cp.product, e.target.value)}
+                                      className="mt-1 w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                                    >
+                                      <option value="">Any Variant</option>
+                                      {product.variants.map(v => (
+                                        <option key={v.size} value={v.size}>
+                                          {v.size} — ₹{v.price}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
                                 </div>
                                 <input
                                   type="number"
@@ -724,22 +776,103 @@ const ComboOfferManagement = () => {
                         </div>
                       )}
 
-                      {/* Combo Price */}
+                      {/* Pricing Mode */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Combo Price (₹) *
+                          Pricing Mode *
                         </label>
-                        <input
-                          type="number"
-                          value={formData.comboPrice}
-                          onChange={(e) => setFormData({ ...formData, comboPrice: parseInt(e.target.value) || 0 })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          min="0"
-                        />
-                        {formData.comboPrice > 0 && (
-                          <p className="text-sm text-green-600 mt-1">
-                            Customers save: ₹{(calculateOriginalPrice() - formData.comboPrice).toLocaleString('en-IN')}
-                          </p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPricingMode('fixed_discount');
+                              setFormData({ ...formData, comboPrice: 0 });
+                            }}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              pricingMode === 'fixed_discount'
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <p className={`font-medium text-sm ${pricingMode === 'fixed_discount' ? 'text-green-700' : 'text-gray-700'}`}>
+                              Fixed Discount
+                            </p>
+                            <p className="text-xs text-gray-500">e.g. Save ₹100</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPricingMode('fixed_price');
+                              setFormData({ ...formData, discountValue: 0 });
+                            }}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              pricingMode === 'fixed_price'
+                                ? 'border-purple-500 bg-purple-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <p className={`font-medium text-sm ${pricingMode === 'fixed_price' ? 'text-purple-700' : 'text-gray-700'}`}>
+                              Fixed Combo Price
+                            </p>
+                            <p className="text-xs text-gray-500">e.g. Hamper at ₹499</p>
+                          </button>
+                        </div>
+
+                        {/* Fixed Discount Input */}
+                        {pricingMode === 'fixed_discount' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Discount Amount (₹) *
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.discountValue}
+                              onChange={(e) => setFormData({ ...formData, discountValue: parseInt(e.target.value) || 0, comboPrice: 0 })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              min="0"
+                              placeholder="e.g. 100"
+                            />
+                            {formData.discountValue > 0 && (
+                              <div className="text-sm mt-1 space-y-0.5">
+                                <p className="text-green-600 font-medium">
+                                  Customers save: ₹{formData.discountValue.toLocaleString('en-IN')} (fixed)
+                                </p>
+                                {calculateOriginalPrice() > 0 && (
+                                  <p className="text-gray-500">
+                                    Effective Price: ₹{(calculateOriginalPrice() - formData.discountValue).toLocaleString('en-IN')}
+                                    <span className="text-gray-400"> (varies with variant)</span>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Fixed Combo Price Input */}
+                        {pricingMode === 'fixed_price' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Combo Price (₹) *
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.comboPrice}
+                              onChange={(e) => setFormData({ ...formData, comboPrice: parseInt(e.target.value) || 0, discountValue: 0 })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              min="0"
+                              placeholder="e.g. 499"
+                            />
+                            {formData.comboPrice > 0 && calculateOriginalPrice() > 0 && (
+                              <div className="text-sm mt-1 space-y-0.5">
+                                <p className="text-purple-600 font-medium">
+                                  Bundle at ₹{formData.comboPrice.toLocaleString('en-IN')} (fixed price)
+                                </p>
+                                <p className="text-gray-500">
+                                  Customers save: ₹{(calculateOriginalPrice() - formData.comboPrice).toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

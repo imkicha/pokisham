@@ -31,6 +31,9 @@ const comboOfferSchema = new mongoose.Schema(
         type: Number,
         default: 1,
       },
+      variant: {
+        size: { type: String, default: '' },
+      },
     }],
     // Fixed combo price (for fixed_products type)
     comboPrice: {

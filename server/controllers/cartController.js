@@ -110,34 +110,39 @@ exports.addToCart = async (req, res) => {
 // @access  Private
 exports.updateCartItem = async (req, res) => {
   try {
-    const { quantity, giftWrap } = req.body;
+    const { quantity, giftWrap, variant } = req.body;
 
-    const cart = await Cart.findOne({ user: req.user._id });
-
-    if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cart not found',
-      });
-    }
-
-    const item = cart.items.id(req.params.itemId);
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found in cart',
-      });
-    }
-
+    // Build atomic $set update for the matched array item
+    const setFields = {};
     if (quantity !== undefined) {
-      item.quantity = quantity;
+      setFields['items.$.quantity'] = quantity;
     }
     if (giftWrap !== undefined) {
-      item.giftWrap = giftWrap;
+      setFields['items.$.giftWrap'] = giftWrap;
+    }
+    if (variant !== undefined) {
+      setFields['items.$.variant'] = variant;
     }
 
-    await cart.save();
+    if (Object.keys(setFields).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update',
+      });
+    }
+
+    const result = await Cart.findOneAndUpdate(
+      { user: req.user._id, 'items._id': req.params.itemId },
+      { $set: setFields },
+      { new: true }
+    );
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cart or item not found',
+      });
+    }
 
     const updatedCart = await Cart.findOne({ user: req.user._id }).populate({
       path: 'items.product',

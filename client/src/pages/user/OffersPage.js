@@ -1,15 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiTag, FiPackage, FiGrid, FiShoppingBag, FiClock, FiCopy, FiCheck, FiArrowRight } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiTag, FiPackage, FiGrid, FiShoppingBag, FiClock, FiCopy, FiCheck, FiArrowRight, FiShoppingCart } from 'react-icons/fi';
 import API from '../../api/axios';
 import SEO from '../../components/common/SEO';
 import Breadcrumb from '../../components/common/Breadcrumb';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const OffersPage = () => {
   const [offers, setOffers] = useState([]);
   const [comboOffers, setComboOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [addingCombo, setAddingCombo] = useState(null);
+  const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAddComboToCart = async (combo) => {
+    if (!isAuthenticated) {
+      toast.error('Please login to add items to cart');
+      navigate('/login');
+      return;
+    }
+    if (!combo.comboProducts?.length) return;
+
+    setAddingCombo(combo._id);
+    try {
+      let allAdded = true;
+      for (const cp of combo.comboProducts) {
+        const productId = cp.product?._id || cp.product;
+        const qty = cp.quantity || 1;
+        const product = cp.product;
+        let variant = null;
+        if (cp.variant?.size) {
+          variant = { size: cp.variant.size };
+        } else if (product?.hasVariants && product?.variants?.length > 0) {
+          variant = { size: product.variants[0].size };
+        }
+        if (productId) {
+          const result = await addToCart(productId, qty, variant);
+          if (!result) allAdded = false;
+        }
+      }
+      if (allAdded) {
+        toast.success('Combo products added to cart!');
+        navigate('/cart');
+      }
+    } catch (error) {
+      toast.error('Failed to add combo to cart');
+    } finally {
+      setAddingCombo(null);
+    }
+  };
 
   useEffect(() => {
     fetchAllOffers();
@@ -58,8 +102,15 @@ const OffersPage = () => {
   };
 
   const getDiscountText = (combo) => {
-    if (combo.comboType === 'fixed_products' && combo.comboPrice > 0) {
-      return `Bundle at ₹${combo.comboPrice}`;
+    if (combo.comboType === 'fixed_products') {
+      // Fixed discount mode: show "Save ₹X"
+      if (combo.discountValue > 0) {
+        return `Save ₹${combo.discountValue}`;
+      }
+      // Fixed combo price mode: show "At ₹X"
+      if (combo.comboPrice > 0) {
+        return `At ₹${combo.comboPrice}`;
+      }
     }
     if (combo.discountType === 'percentage' && combo.discountValue > 0) {
       return `${combo.discountValue}% OFF`;
@@ -171,8 +222,9 @@ const OffersPage = () => {
                                     {cp.product?.images?.[0]?.url && (
                                       <img src={cp.product.images[0].url} alt="" className="w-8 h-8 rounded object-cover" />
                                     )}
-                                    <span className="text-xs text-gray-700 font-medium truncate max-w-[100px]">
+                                    <span className="text-xs text-gray-700 font-medium truncate max-w-[120px]">
                                       {cp.product?.name || 'Product'}
+                                      {cp.variant?.size && <span className="text-gray-400"> ({cp.variant.size})</span>}
                                     </span>
                                   </div>
                                 ))}
@@ -184,12 +236,19 @@ const OffersPage = () => {
                           )}
 
                           {combo.comboType === 'category_combo' && combo.applicableCategories?.length > 0 && (
-                            <div className="mb-3 flex flex-wrap gap-1.5">
-                              {combo.applicableCategories.map((cat) => (
-                                <span key={cat._id} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                                  {cat.name}
-                                </span>
-                              ))}
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-500 mb-2">Pick from these categories:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {combo.applicableCategories.map((cat) => (
+                                  <Link
+                                    key={cat._id}
+                                    to={`/products?category=${cat.slug || ''}&combo=${combo._id}&comboMin=${combo.minItemsFromCategory || 2}`}
+                                    className="text-xs bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full font-medium hover:bg-primary-100 transition-colors border border-primary-200 inline-flex items-center gap-1"
+                                  >
+                                    {cat.name} <FiArrowRight className="w-3 h-3" />
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
                           )}
 
@@ -202,14 +261,51 @@ const OffersPage = () => {
                           </div>
 
                           {/* CTA */}
-                          <Link
-                            to="/products"
-                            className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
-                          >
-                            Shop Now <FiArrowRight className="w-4 h-4" />
-                          </Link>
-
-                          <p className="text-xs text-gray-400 text-center mt-2">Auto-applied at checkout</p>
+                          {combo.comboType === 'fixed_products' && combo.comboProducts?.length > 0 ? (
+                            <>
+                              <button
+                                onClick={() => handleAddComboToCart(combo)}
+                                disabled={addingCombo === combo._id}
+                                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm disabled:opacity-60"
+                              >
+                                {addingCombo === combo._id ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Adding...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FiShoppingCart className="w-4 h-4" />
+                                    Add Combo to Cart
+                                  </>
+                                )}
+                              </button>
+                              <p className="text-xs text-gray-400 text-center mt-2">Combo discount applied in cart</p>
+                            </>
+                          ) : combo.comboType === 'category_combo' && combo.applicableCategories?.length > 0 ? (
+                            <>
+                              <Link
+                                to={`/products?category=${combo.applicableCategories[0]?.slug || ''}&combo=${combo._id}&comboMin=${combo.minItemsFromCategory || 2}`}
+                                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
+                              >
+                                <FiShoppingCart className="w-4 h-4" />
+                                Shop & Add to Cart
+                              </Link>
+                              <p className="text-xs text-gray-400 text-center mt-2">
+                                Add {combo.minItemsFromCategory || 2}+ items to get the discount
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                to="/products"
+                                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors text-sm"
+                              >
+                                Shop Now <FiArrowRight className="w-4 h-4" />
+                              </Link>
+                              <p className="text-xs text-gray-400 text-center mt-2">Auto-applied at checkout</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     );

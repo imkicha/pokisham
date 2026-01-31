@@ -159,6 +159,22 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0.0,
     },
+    couponCode: {
+      type: String,
+      default: null,
+    },
+    comboOfferIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ComboOffer',
+    }],
+    comboDiscount: {
+      type: Number,
+      default: 0.0,
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0.0,
+    },
     totalPrice: {
       type: Number,
       required: true,

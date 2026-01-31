@@ -576,37 +576,67 @@ exports.validateComboOffers = async (req, res) => {
       let isApplicable = false;
       let discount = 0;
       let matchedProducts = [];
+      let comboSets = 0;
+
+      // Helper: find cart item matching product ID and variant (if combo specifies one)
+      const findCartItem = (cp) => {
+        const productId = cp.product?._id?.toString();
+        const comboVariantSize = cp.variant?.size || '';
+        return cartItems.find(item => {
+          const itemPid = (item.product?._id || item.product)?.toString();
+          if (itemPid !== productId) return false;
+          // If combo specifies a variant, cart item must match
+          if (comboVariantSize) {
+            const cartVariantSize = item.variant?.size || '';
+            return cartVariantSize === comboVariantSize;
+          }
+          return true;
+        });
+      };
 
       // Check based on combo type
       if (combo.comboType === 'fixed_products') {
-        // All combo products must be in cart with required quantities
-        const comboProductIds = combo.comboProducts.map(cp => cp.product?._id?.toString());
+        // All combo products must be in cart with required quantities (and matching variant)
         const allProductsInCart = combo.comboProducts.every(cp => {
-          const productId = cp.product?._id?.toString();
-          const cartItem = cartItems.find(item =>
-            (item.product?._id || item.product)?.toString() === productId
-          );
+          const cartItem = findCartItem(cp);
           return cartItem && cartItem.quantity >= cp.quantity;
         });
 
         if (allProductsInCart) {
           isApplicable = true;
-          // Calculate original price of combo items
-          let originalTotal = 0;
+
+          // Calculate how many complete combo sets fit in cart
+          let maxSets = Infinity;
           combo.comboProducts.forEach(cp => {
-            const cartItem = cartItems.find(item =>
-              (item.product?._id || item.product)?.toString() === cp.product?._id?.toString()
-            );
+            const cartItem = findCartItem(cp);
             if (cartItem) {
-              originalTotal += cartItem.price * cp.quantity;
+              const setsFromThis = Math.floor(cartItem.quantity / cp.quantity);
+              maxSets = Math.min(maxSets, setsFromThis);
+            }
+          });
+          if (!isFinite(maxSets)) maxSets = 1;
+
+          // Calculate original price per set and total discount for all sets
+          let originalPricePerSet = 0;
+          combo.comboProducts.forEach(cp => {
+            const cartItem = findCartItem(cp);
+            if (cartItem) {
+              originalPricePerSet += cartItem.price * cp.quantity;
               matchedProducts.push({
                 productId: cp.product?._id,
                 name: cp.product?.name,
-                quantity: cp.quantity,
+                quantity: cp.quantity * maxSets,
+                variant: cp.variant?.size ? cp.variant : null,
               });
             }
           });
-          discount = originalTotal - combo.comboPrice;
+          // Use fixed discountValue if set (discount stays constant regardless of variant)
+          // Otherwise fall back to originalPrice - comboPrice (legacy/fixed_price mode)
+          const discountPerSet = combo.discountValue > 0
+            ? combo.discountValue
+            : Math.max(0, originalPricePerSet - combo.comboPrice);
+          discount = discountPerSet * maxSets;
+          comboSets = maxSets;
         }
       } else if (combo.comboType === 'category_combo') {
         // Check if minimum items from applicable categories are in cart
@@ -688,7 +718,7 @@ exports.validateComboOffers = async (req, res) => {
       }
 
       if (isApplicable && discount > 0) {
-        applicableCombos.push({
+        const comboResult = {
           _id: combo._id,
           title: combo.title,
           description: combo.description,
@@ -698,18 +728,73 @@ exports.validateComboOffers = async (req, res) => {
           allowAdminOffersOnTop: combo.allowAdminOffersOnTop,
           isGlobal: combo.isGlobal,
           matchedProducts,
-        });
+        };
+        // Include sets count for fixed_products combos
+        if (combo.comboType === 'fixed_products' && comboSets > 0) {
+          comboResult.sets = comboSets;
+          comboResult.comboPrice = combo.comboPrice;
+          comboResult.discountValue = combo.discountValue;
+          comboResult.discountPerSet = Math.round((discount / comboSets) * 100) / 100;
+          comboResult.pricingMode = combo.discountValue > 0 ? 'fixed_discount' : 'fixed_price';
+        }
+        applicableCombos.push(comboResult);
       }
     }
 
     // Sort by discount (highest first)
     applicableCombos.sort((a, b) => b.discount - a.discount);
 
+    // Greedy allocation: ensure products aren't double-counted across combos
+    // Key includes variant size so different variants are tracked separately
+    const allocatedQty = {}; // "productId|variantSize" -> allocated quantity
+    const allocatedCombos = [];
+
+    for (const combo of applicableCombos) {
+      if (combo.comboType === 'fixed_products') {
+        // Check if enough unallocated qty remains for this combo
+        let canAllocate = true;
+        const needed = {};
+        for (const mp of combo.matchedProducts) {
+          const pid = (mp.productId?._id || mp.productId)?.toString();
+          const variantSize = mp.variant?.size || '';
+          const allocKey = `${pid}|${variantSize}`;
+          const cartItem = cartItems.find(item => {
+            const itemPid = (item.product?._id || item.product)?.toString();
+            if (itemPid !== pid) return false;
+            if (variantSize) return (item.variant?.size || '') === variantSize;
+            return true;
+          });
+          const totalQty = cartItem ? cartItem.quantity : 0;
+          const usedQty = allocatedQty[allocKey] || 0;
+          const available = totalQty - usedQty;
+          if (available < mp.quantity) {
+            canAllocate = false;
+            break;
+          }
+          needed[allocKey] = mp.quantity;
+        }
+
+        if (canAllocate) {
+          // Allocate these quantities
+          for (const [key, qty] of Object.entries(needed)) {
+            allocatedQty[key] = (allocatedQty[key] || 0) + qty;
+          }
+          allocatedCombos.push(combo);
+        }
+      } else {
+        // For category_combo and any_n_products, just include (no strict allocation)
+        allocatedCombos.push(combo);
+      }
+    }
+
+    const totalDiscount = allocatedCombos.reduce((sum, c) => sum + c.discount, 0);
+
     res.status(200).json({
       success: true,
-      count: applicableCombos.length,
-      combos: applicableCombos,
-      bestCombo: applicableCombos[0] || null,
+      count: allocatedCombos.length,
+      combos: allocatedCombos,
+      bestCombo: allocatedCombos[0] || null,
+      totalDiscount: Math.round(totalDiscount * 100) / 100,
     });
   } catch (error) {
     res.status(500).json({
@@ -772,8 +857,8 @@ exports.getActiveComboOffers = async (req, res) => {
       startDate: { $lte: now },
       endDate: { $gte: now },
     })
-      .populate('comboProducts.product', 'name price discountPrice images')
-      .populate('applicableCategories', 'name')
+      .populate('comboProducts.product', 'name price discountPrice images hasVariants variants')
+      .populate('applicableCategories', 'name slug')
       .sort({ priority: -1, createdAt: -1 })
       .limit(20);
 

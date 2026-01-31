@@ -104,8 +104,13 @@ exports.createOrder = async (req, res) => {
       taxPrice,
       shippingPrice,
       giftWrapPrice,
+      packingPrice,
       discountPrice,
       totalPrice,
+      couponCode,
+      comboOfferId,
+      comboDiscount,
+      couponDiscount,
     } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
@@ -150,6 +155,86 @@ exports.createOrder = async (req, res) => {
       }
     }
 
+    // Server-side validation: verify combo discount matches actual combo value
+    let verifiedComboDiscount = 0;
+    if (comboOfferId && comboDiscount > 0) {
+      const ComboOffer = require('../models/ComboOffer');
+      const comboIds = Array.isArray(comboOfferId) ? comboOfferId : [comboOfferId];
+      const now = new Date();
+
+      // Build cart items for validation (use order items with product prices)
+      const cartItemsForValidation = orderItems.map(item => ({
+        product: { _id: item.product },
+        quantity: item.quantity,
+        price: item.price,
+        variant: item.variant || null,
+      }));
+
+      for (const cid of comboIds) {
+        try {
+          const combo = await ComboOffer.findById(cid)
+            .populate('comboProducts.product', 'name price discountPrice hasVariants variants');
+
+          if (!combo || !combo.isActive || combo.startDate > now || combo.endDate < now) continue;
+
+          if (combo.comboType === 'fixed_products') {
+            // Verify all products are in order with required quantities
+            let maxSets = Infinity;
+            let originalPricePerSet = 0;
+            let allPresent = true;
+
+            for (const cp of combo.comboProducts) {
+              const productId = cp.product?._id?.toString();
+              const comboVariantSize = cp.variant?.size || '';
+              const cartItem = cartItemsForValidation.find(item => {
+                const itemPid = (item.product?._id || item.product)?.toString();
+                if (itemPid !== productId) return false;
+                if (comboVariantSize) return (item.variant?.size || '') === comboVariantSize;
+                return true;
+              });
+
+              if (!cartItem || cartItem.quantity < cp.quantity) {
+                allPresent = false;
+                break;
+              }
+              maxSets = Math.min(maxSets, Math.floor(cartItem.quantity / cp.quantity));
+              originalPricePerSet += cartItem.price * cp.quantity;
+            }
+
+            if (allPresent && isFinite(maxSets) && maxSets > 0) {
+              const discountPerSet = combo.discountValue > 0
+                ? combo.discountValue
+                : Math.max(0, originalPricePerSet - combo.comboPrice);
+              verifiedComboDiscount += discountPerSet * maxSets;
+            }
+          } else {
+            // For category/any_n combos, trust the client-side calculation
+            // (full re-validation would require product population with categories)
+            verifiedComboDiscount += comboDiscount;
+          }
+        } catch (err) {
+          console.error(`Failed to verify combo ${cid}:`, err.message);
+        }
+      }
+
+      // If client claims more discount than server verifies, cap it
+      if (comboDiscount > verifiedComboDiscount + 1) { // +1 for rounding tolerance
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid combo discount amount. Please refresh and try again.',
+        });
+      }
+    }
+
+    // Server-side validation: verify total price is reasonable
+    const expectedTotal = itemsPrice + (giftWrapPrice || 0) + (packingPrice || 0) + (shippingPrice || 0) + (taxPrice || 0) - (discountPrice || 0);
+    if (Math.abs(totalPrice - expectedTotal) > 2) { // 2 rupee tolerance for rounding
+      return res.status(400).json({
+        success: false,
+        message: 'Price mismatch detected. Please refresh and try again.',
+      });
+    }
+
     // Generate order number
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
@@ -171,8 +256,13 @@ exports.createOrder = async (req, res) => {
       taxPrice,
       shippingPrice,
       giftWrapPrice,
+      packingPrice: packingPrice || 0,
       discountPrice,
       totalPrice,
+      couponCode: couponCode || null,
+      comboOfferIds: Array.isArray(comboOfferId) ? comboOfferId : (comboOfferId ? [comboOfferId] : []),
+      comboDiscount: comboDiscount || 0,
+      couponDiscount: couponDiscount || 0,
       statusHistory: [
         {
           status: 'Pending',
@@ -180,6 +270,31 @@ exports.createOrder = async (req, res) => {
         },
       ],
     });
+
+    // Mark combo offers as used server-side
+    if (comboOfferId) {
+      const comboIds = Array.isArray(comboOfferId) ? comboOfferId : [comboOfferId];
+      const ComboOffer = require('../models/ComboOffer');
+      for (const cid of comboIds) {
+        try {
+          const comboOffer = await ComboOffer.findById(cid);
+          if (comboOffer) {
+            comboOffer.usageCount += 1;
+            const userUsageIndex = comboOffer.usedBy.findIndex(u =>
+              u.user.toString() === req.user._id.toString()
+            );
+            if (userUsageIndex > -1) {
+              comboOffer.usedBy[userUsageIndex].usageCount += 1;
+            } else {
+              comboOffer.usedBy.push({ user: req.user._id, usageCount: 1 });
+            }
+            await comboOffer.save();
+          }
+        } catch (err) {
+          console.error(`Failed to mark combo ${cid} as used:`, err.message);
+        }
+      }
+    }
 
     // Update product stock
     for (const item of orderItems) {

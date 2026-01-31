@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { FiFilter, FiX, FiChevronDown } from 'react-icons/fi';
+import { useSearchParams, Link } from 'react-router-dom';
+import { FiFilter, FiX, FiChevronDown, FiGift, FiShoppingCart } from 'react-icons/fi';
 import ProductCard from '../../components/product/ProductCard';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import API from '../../api/axios';
@@ -18,6 +18,11 @@ const ProductsPage = () => {
   const sortParam = searchParams.get('sort');
   const searchQuery = searchParams.get('search');
   const isNewArrivals = sortParam === 'latest';
+
+  // Combo offer context (when navigated from OffersPage)
+  const comboId = searchParams.get('combo');
+  const comboMin = searchParams.get('comboMin');
+  const [comboInfo, setComboInfo] = useState(null);
 
   // Filter & sort state
   const [sortOption, setSortOption] = useState('');
@@ -41,6 +46,26 @@ const ProductsPage = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Fetch combo info when navigated from offers page
+  useEffect(() => {
+    if (!comboId) {
+      setComboInfo(null);
+      return;
+    }
+    const fetchCombo = async () => {
+      try {
+        const { data } = await API.get('/combo-offers/active');
+        if (data.success) {
+          const combo = data.comboOffers.find(c => c._id === comboId);
+          if (combo) setComboInfo(combo);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchCombo();
+  }, [comboId]);
 
   useEffect(() => {
     fetchProducts();
@@ -174,6 +199,54 @@ const ProductsPage = () => {
               : 'Browse our complete product catalog'}
           </p>
         </div>
+
+        {/* Combo Offer Banner */}
+        {comboInfo && (
+          <div className="mb-4 sm:mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 sm:p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-green-100 rounded-full p-2 flex-shrink-0">
+                <FiGift className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm sm:text-base font-bold text-green-800">
+                  {comboInfo.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-green-700 mt-0.5">
+                  Add {comboMin || comboInfo.minItemsFromCategory || 2}+ items from this category to your cart to get{' '}
+                  <span className="font-bold">
+                    {comboInfo.discountType === 'percentage'
+                      ? `${comboInfo.discountValue}% OFF`
+                      : `₹${comboInfo.discountValue} OFF`}
+                  </span>
+                </p>
+                {comboInfo.applicableCategories?.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {comboInfo.applicableCategories.map((cat) => (
+                      <Link
+                        key={cat._id}
+                        to={`/products?category=${cat.slug || ''}&combo=${comboId}&comboMin=${comboMin || comboInfo.minItemsFromCategory || 2}`}
+                        className={`text-[11px] sm:text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                          categorySlug === cat.slug
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                        }`}
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Link
+                to="/cart"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 bg-green-600 text-white text-xs sm:text-sm font-medium px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <FiShoppingCart className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">View Cart</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Filter & Sort Bar */}
         <div className="mb-4 sm:mb-6">

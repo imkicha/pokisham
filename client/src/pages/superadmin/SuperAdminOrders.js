@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiEye, FiSend, FiFilter, FiSearch, FiX, FiDownload, FiMail, FiMessageCircle } from 'react-icons/fi';
+import { FiEye, FiSend, FiFilter, FiSearch, FiX, FiDownload, FiMail, FiMessageCircle, FiCreditCard, FiPercent, FiShoppingBag, FiPackage, FiUser, FiCalendar } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
@@ -130,6 +130,14 @@ const SuperAdminOrders = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   const getTenantName = (tenantId) => {
@@ -396,8 +404,11 @@ const SuperAdminOrders = () => {
                       <td className="px-4 py-4 text-sm text-gray-500 hidden md:table-cell">
                         {order.user?.name || 'N/A'}
                       </td>
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                        ₹{order.totalPrice.toLocaleString('en-IN')}
+                      <td className="px-4 py-4">
+                        <div className="text-sm font-medium text-gray-900">₹{order.totalPrice.toLocaleString('en-IN')}</div>
+                        {order.discountPrice > 0 && (
+                          <div className="text-xs text-green-600">-₹{order.discountPrice} off</div>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-500 hidden sm:table-cell">
                         {order.isMultiTenant ? (
@@ -519,61 +530,146 @@ const SuperAdminOrders = () => {
                   </button>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-5">
+                  {/* Order Overview Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.orderStatus)}`}>
+                      {selectedOrder.orderStatus}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      selectedOrder.paymentInfo?.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      selectedOrder.paymentInfo?.status === 'failed' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      <FiCreditCard className="w-3 h-3" />
+                      {selectedOrder.paymentMethod} — {selectedOrder.paymentInfo?.status || 'pending'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      <FiCalendar className="w-3 h-3" />
+                      {formatDate(selectedOrder.createdAt)}
+                    </span>
+                    {selectedOrder.discountPrice > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        <FiPercent className="w-3 h-3" />
+                        Saved ₹{selectedOrder.discountPrice}
+                      </span>
+                    )}
+                  </div>
+
                   {/* Customer Info */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Customer Information</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-700 font-medium">{selectedOrder.shippingAddress?.name || selectedOrder.user?.name}</p>
-                      <p className="text-gray-600">{selectedOrder.user?.email}</p>
-                      <p className="text-gray-600">{selectedOrder.shippingAddress?.phone}</p>
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-2 flex items-center gap-2">
+                      <FiUser className="text-primary-600" />
+                      Customer Information
+                    </h3>
+                    <p className="text-gray-700 font-medium">{selectedOrder.shippingAddress?.name || selectedOrder.user?.name}</p>
+                    <p className="text-gray-600 text-sm">{selectedOrder.user?.email}</p>
+                    <p className="text-gray-600 text-sm">{selectedOrder.shippingAddress?.phone}</p>
                   </div>
 
                   {/* Shipping Address */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Shipping Address</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-700">{selectedOrder.shippingAddress?.addressLine1}</p>
-                      {selectedOrder.shippingAddress?.addressLine2 && (
-                        <p className="text-gray-700">{selectedOrder.shippingAddress?.addressLine2}</p>
-                      )}
-                      <p className="text-gray-700">
-                        {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} - {selectedOrder.shippingAddress?.pincode}
-                      </p>
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-base md:text-lg font-semibold mb-2">Shipping Address</h3>
+                    <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.addressLine1}</p>
+                    {selectedOrder.shippingAddress?.addressLine2 && (
+                      <p className="text-gray-700 text-sm">{selectedOrder.shippingAddress?.addressLine2}</p>
+                    )}
+                    <p className="text-gray-700 text-sm">
+                      {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state} - {selectedOrder.shippingAddress?.pincode}
+                    </p>
                   </div>
 
                   {/* Order Items */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Order Items</h3>
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <h3 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2">
+                      <FiShoppingBag className="text-primary-600" />
+                      Order Items ({selectedOrder.orderItems?.reduce((sum, i) => sum + i.quantity, 0)} items)
+                    </h3>
+                    <div className="border rounded-lg overflow-hidden">
                       {selectedOrder.orderItems?.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center pb-3 border-b last:border-b-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{item.name}</p>
-                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                            {item.variant?.size && (
-                              <p className="text-sm text-gray-600">Size: {item.variant.size}</p>
-                            )}
+                        <div key={index} className="flex items-center gap-3 p-3 border-b last:border-0 hover:bg-gray-50">
+                          {/* Product Image */}
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-12 h-12 md:w-14 md:h-14 rounded-lg object-cover border flex-shrink-0"
+                            />
+                          )}
+                          {/* Product Details */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-gray-900 font-medium text-sm md:text-base truncate">{item.name}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {item.variant?.size && (
+                                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">
+                                  {item.variant.size}
+                                </span>
+                              )}
+                              {item.giftWrap && (
+                                <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-medium">
+                                  Gift Wrap
+                                </span>
+                              )}
+                              {item.customPhoto?.url && (
+                                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-medium">
+                                  Custom Photo
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="font-medium text-gray-900">₹{item.price * item.quantity}</p>
+                          {/* Price Breakdown */}
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-gray-900 font-semibold text-sm md:text-base">₹{item.price * item.quantity}</p>
+                            <p className="text-xs text-gray-500">
+                              {item.quantity > 1 ? `${item.quantity} × ₹${item.price}` : `₹${item.price}`}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
+                  {/* Combo Offers Applied */}
+                  {selectedOrder.comboOfferIds?.length > 0 && selectedOrder.comboDiscount > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h3 className="text-sm md:text-base font-semibold text-green-800 flex items-center gap-2 mb-1">
+                        <FiPackage className="w-4 h-4" />
+                        Combo Offer Applied
+                      </h3>
+                      <p className="text-sm text-green-700">
+                        Combo discount: <span className="font-bold">-₹{selectedOrder.comboDiscount}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Coupon Applied */}
+                  {selectedOrder.couponCode && selectedOrder.couponDiscount > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="text-sm md:text-base font-semibold text-blue-800 flex items-center gap-2 mb-1">
+                        <FiPercent className="w-4 h-4" />
+                        Coupon Applied
+                      </h3>
+                      <p className="text-sm text-blue-700">
+                        Code: <span className="font-mono font-bold">{selectedOrder.couponCode}</span>
+                        {' '}— Saved <span className="font-bold">₹{selectedOrder.couponDiscount}</span>
+                      </p>
+                    </div>
+                  )}
+
                   {/* Update Status */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Update Status</h3>
+                    <h3 className="text-base md:text-lg font-semibold mb-2">Update Status</h3>
                     <select
                       value={selectedOrder.orderStatus}
                       onChange={(e) => handleStatusUpdate(selectedOrder._id, e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm md:text-base"
                     >
                       <option value="Pending">Pending</option>
+                      <option value="Accepted">Accepted</option>
                       <option value="Processing">Processing</option>
+                      <option value="Packed">Packed</option>
                       <option value="Shipped">Shipped</option>
+                      <option value="Out for Delivery">Out for Delivery</option>
                       <option value="Delivered">Delivered</option>
                       <option value="Cancelled">Cancelled</option>
                     </select>
@@ -582,84 +678,51 @@ const SuperAdminOrders = () => {
                   {/* Tracking Number (for Shipped status) */}
                   {selectedOrder.orderStatus === 'Shipped' && (
                     <div>
-                      <h3 className="text-lg font-semibold mb-2">Tracking Number (Optional)</h3>
+                      <h3 className="text-base md:text-lg font-semibold mb-2">Tracking Number (Optional)</h3>
                       <input
                         type="text"
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
                         placeholder="Enter tracking number"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm md:text-base"
                       />
                     </div>
                   )}
 
                   {/* Send Notification */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2">
                       <FiSend className="text-primary-600" />
                       Send Status Notification
                     </h3>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-xs md:text-sm text-gray-600 mb-3">
                       Notify customer about order status: <span className="font-semibold text-primary-600">{selectedOrder.orderStatus}</span>
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => handleSendNotification(selectedOrder._id, 'email')}
                         disabled={sendingNotification}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs md:text-sm"
                       >
-                        <FiMail /> Email
+                        <FiMail className="w-4 h-4" />
+                        <span>Email</span>
                       </button>
                       <button
                         onClick={() => handleSendNotification(selectedOrder._id, 'whatsapp')}
                         disabled={sendingNotification}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs md:text-sm"
                       >
-                        <FaWhatsapp /> WhatsApp
+                        <FaWhatsapp className="w-4 h-4" />
+                        <span>WhatsApp</span>
                       </button>
                       <button
                         onClick={() => handleSendNotification(selectedOrder._id, 'both')}
                         disabled={sendingNotification}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs md:text-sm"
                       >
-                        <FiMessageCircle /> Both
+                        <FiMessageCircle className="w-4 h-4" />
+                        <span>Both</span>
                       </button>
-                    </div>
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span>₹{selectedOrder.itemsPrice}</span>
-                    </div>
-                    {(selectedOrder.packingPrice > 0 || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0)) > 0) && (
-                      <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Packing Charges</span>
-                        <span>₹{selectedOrder.packingPrice || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0))}</span>
-                      </div>
-                    )}
-                    {selectedOrder.giftWrapPrice > 0 && (
-                      <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Gift Wrap</span>
-                        <span>₹{selectedOrder.giftWrapPrice}</span>
-                      </div>
-                    )}
-                    {selectedOrder.shippingPrice > 0 && (
-                      <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Delivery Charge</span>
-                        <span className="text-green-600">₹{selectedOrder.shippingPrice}</span>
-                      </div>
-                    )}
-                    {selectedOrder.shippingPrice === 0 && (
-                      <div className="flex justify-between mb-2">
-                        <span className="text-gray-600">Delivery</span>
-                        <span className="text-orange-600 font-medium">To Pay</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                      <span>Total</span>
-                      <span className="text-primary-600">₹{selectedOrder.totalPrice}</span>
                     </div>
                   </div>
 
@@ -667,17 +730,91 @@ const SuperAdminOrders = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => handleDownloadInvoice(selectedOrder._id, selectedOrder.orderNumber)}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors text-sm md:text-base"
                     >
-                      <FiDownload /> Download
+                      <FiDownload className="w-4 h-4 md:w-5 md:h-5" />
+                      <span>Download</span>
                     </button>
                     <button
                       onClick={() => handleShareInvoice(selectedOrder._id)}
                       disabled={sharingInvoice}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors text-sm md:text-base"
                     >
-                      <FaWhatsapp /> {sharingInvoice ? 'Uploading...' : 'Share PDF'}
+                      <FaWhatsapp className="w-4 h-4 md:w-5 md:h-5" />
+                      <span>{sharingInvoice ? 'Uploading...' : 'Share PDF'}</span>
                     </button>
+                  </div>
+
+                  {/* Price Summary */}
+                  <div className="pt-4 border-t bg-gray-50 -mx-6 px-6 py-4 -mb-6 rounded-b-lg">
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Price Breakdown</h3>
+                    <div className="space-y-2 text-sm md:text-base">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Items Total</span>
+                        <span>₹{selectedOrder.itemsPrice}</span>
+                      </div>
+                      {selectedOrder.packingPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Packing Charges</span>
+                          <span>₹{selectedOrder.packingPrice}</span>
+                        </div>
+                      )}
+                      {selectedOrder.giftWrapPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Gift Wrap</span>
+                          <span>₹{selectedOrder.giftWrapPrice}</span>
+                        </div>
+                      )}
+                      {selectedOrder.shippingPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Delivery Charge</span>
+                          <span>₹{selectedOrder.shippingPrice}</span>
+                        </div>
+                      )}
+                      {selectedOrder.shippingPrice === 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Delivery</span>
+                          <span className="text-orange-600 font-medium">To Pay</span>
+                        </div>
+                      )}
+                      {selectedOrder.taxPrice > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tax</span>
+                          <span>₹{selectedOrder.taxPrice}</span>
+                        </div>
+                      )}
+                      {selectedOrder.discountPrice > 0 && (
+                        <>
+                          <div className="flex justify-between text-green-600 font-medium">
+                            <span>Discount</span>
+                            <span>-₹{selectedOrder.discountPrice}</span>
+                          </div>
+                          {/* Show combo/coupon breakdown only when both exist */}
+                          {selectedOrder.comboDiscount > 0 && selectedOrder.couponDiscount > 0 && (
+                            <div className="ml-4 space-y-1">
+                              <div className="flex justify-between text-xs text-green-500">
+                                <span>Combo Offer</span>
+                                <span>-₹{selectedOrder.comboDiscount}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-green-500">
+                                <span>Coupon {selectedOrder.couponCode && `(${selectedOrder.couponCode})`}</span>
+                                <span>-₹{selectedOrder.couponDiscount}</span>
+                              </div>
+                            </div>
+                          )}
+                          {/* Show coupon code if only coupon discount */}
+                          {selectedOrder.couponCode && !selectedOrder.comboDiscount && (
+                            <div className="flex justify-between text-xs text-green-500 ml-4">
+                              <span>Coupon: {selectedOrder.couponCode}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="flex justify-between text-lg font-bold border-t pt-3 mt-3">
+                        <span>Total Amount</span>
+                        <span className="text-primary-600">₹{selectedOrder.totalPrice}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

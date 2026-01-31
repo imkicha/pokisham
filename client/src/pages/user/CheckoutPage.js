@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiPackage, FiCheckCircle, FiTag, FiX, FiCreditCard, FiShield, FiLayers, FiGift } from 'react-icons/fi';
+import { FiCheck, FiPackage, FiCheckCircle, FiTag, FiX, FiCreditCard, FiShield, FiLayers, FiGift, FiPercent, FiShoppingBag } from 'react-icons/fi';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import Breadcrumb from '../../components/common/Breadcrumb';
@@ -75,6 +75,7 @@ const CheckoutPage = () => {
   // Combo offer state
   const [availableCombos, setAvailableCombos] = useState([]);
   const [appliedCombo, setAppliedCombo] = useState(null);
+  const [comboDiscounts, setComboDiscounts] = useState([]);
   const [comboLoading, setComboLoading] = useState(false);
 
   // ------------------------------
@@ -144,15 +145,25 @@ const CheckoutPage = () => {
 
       try {
         setComboLoading(true);
-        const cartItems = cart.items.map(item => ({
-          product: {
-            _id: item.product._id,
-            tenant: item.product.tenant,
-            category: item.product.category?._id || item.product.category,
-          },
-          price: item.product.discountPrice || item.product.price,
-          quantity: item.quantity,
-        }));
+        const cartItems = cart.items.map(item => {
+          let price;
+          if (item.variant && item.product.hasVariants) {
+            const v = item.product.variants?.find(v => v.size === item.variant.size);
+            price = v ? v.price : item.product.price;
+          } else {
+            price = item.product.discountPrice || item.product.price;
+          }
+          return {
+            product: {
+              _id: item.product._id,
+              tenant: item.product.tenant,
+              category: item.product.category?._id || item.product.category,
+            },
+            price,
+            quantity: item.quantity,
+            variant: item.variant || null,
+          };
+        });
 
         const { data } = await API.post('/combo-offers/validate', {
           cartItems,
@@ -161,10 +172,13 @@ const CheckoutPage = () => {
 
         if (data.success && data.combos?.length > 0) {
           setAvailableCombos(data.combos);
+          setComboDiscounts(data.combos);
           // Auto-apply the best combo if no coupon is applied
           if (!appliedCoupon && data.bestCombo) {
             setAppliedCombo(data.bestCombo);
           }
+        } else {
+          setComboDiscounts([]);
         }
       } catch (error) {
         console.error('Failed to fetch combo offers:', error);
@@ -222,19 +236,20 @@ const CheckoutPage = () => {
   // Calculate discount from coupon
   const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0;
 
-  // Calculate combo discount
-  const comboDiscount = appliedCombo ? appliedCombo.discount : 0;
+  // Calculate combo discount (sum of all combos)
+  const comboDiscount = comboDiscounts.reduce((sum, c) => sum + (c.discount || 0), 0);
 
   // Check if admin offers can be applied on top of combo
-  const canStackWithCoupon = appliedCombo ? appliedCombo.allowAdminOffersOnTop : true;
+  const canStackWithCoupon = comboDiscounts.length > 0
+    ? comboDiscounts.every(c => c.allowAdminOffersOnTop)
+    : true;
 
   // Total discount - if combo allows stacking, add both; otherwise use higher one
   let discount = 0;
-  if (appliedCombo && appliedCoupon) {
+  if (comboDiscount > 0 && appliedCoupon) {
     if (canStackWithCoupon) {
       discount = comboDiscount + couponDiscount;
     } else {
-      // Use the higher discount
       discount = Math.max(comboDiscount, couponDiscount);
     }
   } else {
@@ -325,11 +340,11 @@ const CheckoutPage = () => {
       taxPrice: 0,
       discountPrice: discount,
       couponCode: appliedCoupon?.code || null,
-      comboOfferId: appliedCombo?._id || null,
+      comboOfferId: comboDiscounts.length > 0 ? comboDiscounts.map(c => c._id) : (appliedCombo?._id || null),
       comboDiscount: comboDiscount,
       couponDiscount: couponDiscount,
     };
-  }, [cart, shippingAddress, subtotal, giftWrapFee, packingCharge, shippingFee, total, discount, appliedCoupon, appliedCombo, comboDiscount, couponDiscount]);
+  }, [cart, shippingAddress, subtotal, giftWrapFee, packingCharge, shippingFee, total, discount, appliedCoupon, appliedCombo, comboDiscount, couponDiscount, comboDiscounts]);
 
   // Handle order completion (common for both COD and Online)
   const handleOrderSuccess = async (orderId) => {
@@ -344,14 +359,7 @@ const CheckoutPage = () => {
       }
     }
 
-    // Mark combo offer as used if applied
-    if (appliedCombo && appliedCombo._id) {
-      try {
-        await API.post(`/combo-offers/${appliedCombo._id}/use`);
-      } catch (err) {
-        console.error('Failed to mark combo as used:', err);
-      }
-    }
+    // Combo offers are now marked as used server-side in createOrder
 
     // Clear cart and show success
     await clearCart();
@@ -620,6 +628,62 @@ const CheckoutPage = () => {
   // --------------------------------------------
   // 🧾 CHECKOUT SCREEN
   // --------------------------------------------
+  // Build combo set grouping for display (same logic as CartPage)
+  const validItems = cart?.items?.filter((item) => item.product !== null) || [];
+  const allComboSets = comboDiscounts.length > 0
+    ? (() => {
+        const allAllocatedIds = new Map();
+        const comboGroups = [];
+
+        for (const combo of comboDiscounts) {
+          if (!combo.matchedProducts?.length) continue;
+          const sets = combo.sets || 1;
+
+          const qtyPerProduct = {};
+          combo.matchedProducts.forEach(mp => {
+            const pid = (mp.productId?._id || mp.productId)?.toString();
+            qtyPerProduct[pid] = Math.floor(mp.quantity / sets);
+          });
+
+          const comboItems = validItems.filter(item => {
+            const pid = item.product._id.toString();
+            return qtyPerProduct[pid] > 0;
+          });
+
+          const setsArr = [];
+          for (let s = 0; s < sets; s++) {
+            setsArr.push({
+              setNumber: s + 1,
+              items: comboItems.map(item => ({
+                ...item,
+                comboQty: qtyPerProduct[item.product._id.toString()] || 1,
+              })),
+            });
+          }
+
+          comboItems.forEach(item => {
+            const pid = item.product._id.toString();
+            const totalUsed = (qtyPerProduct[pid] || 1) * sets;
+            allAllocatedIds.set(pid, (allAllocatedIds.get(pid) || 0) + totalUsed);
+          });
+
+          comboGroups.push({ combo, sets: setsArr });
+        }
+
+        const nonComboItems = validItems.filter(item => !allAllocatedIds.has(item.product._id.toString()));
+        const leftovers = [];
+        validItems.forEach(item => {
+          const pid = item.product._id.toString();
+          const allocated = allAllocatedIds.get(pid) || 0;
+          if (allocated > 0 && item.quantity > allocated) {
+            leftovers.push({ ...item, leftoverQty: item.quantity - allocated });
+          }
+        });
+
+        return { comboGroups, nonComboItems, leftovers };
+      })()
+    : null;
+
   const breadcrumbs = [
     { label: 'Shopping Cart', path: '/cart' },
     { label: 'Checkout' }
@@ -814,25 +878,92 @@ const CheckoutPage = () => {
 
               <h2 className="text-xl font-bold mb-4">Order Summary</h2>
 
-              <div className="space-y-3 mb-4 pb-4 border-b max-h-60 overflow-y-auto">
-                {cart.items.map((item) => (
-                  <div key={item._id} className="flex gap-3">
-
-                    <img src={item.product.images?.[0]?.url} alt=""
-                      className="w-16 h-16 rounded object-cover border" />
-
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium">{item.product.name}</h3>
-                      {item.variant && (
-                        <p className="text-xs text-gray-600">Size: {item.variant.size}</p>
-                      )}
-                      <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                    </div>
-
-                    <div className="font-semibold">₹{getItemPrice(item) * item.quantity}</div>
-
+              <div className="space-y-3 mb-4 pb-4 border-b max-h-80 overflow-y-auto">
+                {/* Combo Offers Section Header */}
+                {allComboSets && allComboSets.comboGroups.length > 0 && (
+                  <div className="flex items-center gap-2 pb-1">
+                    <FiPackage className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs font-semibold text-green-800 uppercase tracking-wide">Combo Offers</span>
+                    <div className="flex-1 h-px bg-green-200" />
                   </div>
-                ))}
+                )}
+                {/* Combo groups */}
+                {allComboSets && allComboSets.comboGroups.map(({ combo, sets }) => {
+                  const originalPrice = sets[0].items.reduce((s, i) => s + getItemPrice(i) * i.comboQty, 0) * sets.length;
+                  const savings = (combo.discountPerSet || 0) * sets.length;
+                  const comboTotal = originalPrice - savings;
+                  return (
+                    <div key={`chk-combo-${combo._id}`} className="bg-green-50 rounded-lg p-2.5">
+                      {/* Combo header */}
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <FiPackage className="w-3.5 h-3.5 text-green-600" />
+                        <span className="text-sm font-semibold text-green-800">
+                          {combo.title} × {sets.length}
+                        </span>
+                      </div>
+
+                      {/* Each item with image and price */}
+                      <div className="space-y-1.5">
+                        {sets[0].items.map((item) => (
+                          <div key={`chk-sc-${combo._id}-${item._id}`} className="flex items-center gap-2">
+                            <img
+                              src={item.product.images?.[0]?.url || '/placeholder.png'}
+                              alt={item.product.name}
+                              className="w-8 h-8 rounded object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-700 line-clamp-1">
+                                {item.product.name}
+                                {item.variant?.size && <span className="text-gray-400"> ({item.variant.size})</span>}
+                              </p>
+                              <p className="text-xs text-gray-400">Qty: {item.comboQty * sets.length} × ₹{getItemPrice(item)}</p>
+                            </div>
+                            <span className="text-sm text-gray-500 line-through">₹{getItemPrice(item) * item.comboQty * sets.length}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Combo price and savings */}
+                      <div className="mt-2 pt-2 border-t border-green-200 flex items-center justify-between">
+                        <span className="text-sm font-bold text-green-700">
+                          {combo.pricingMode === 'fixed_price' ? 'Bundle Price' : 'Combo Price'}
+                        </span>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-green-700">₹{comboTotal}</span>
+                          {savings > 0 && (
+                            <p className="text-xs text-green-600">Save ₹{savings}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Individual Items Section Header */}
+                {allComboSets && allComboSets.comboGroups.length > 0 && (allComboSets.nonComboItems.length > 0 || allComboSets.leftovers.length > 0) && (
+                  <div className="flex items-center gap-2 pt-1 pb-1">
+                    <FiShoppingBag className="w-3.5 h-3.5 text-gray-500" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Individual Items</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                )}
+                {(allComboSets ? [...allComboSets.nonComboItems, ...allComboSets.leftovers] : (cart?.items || [])).map((item) => {
+                  const showQty = item.leftoverQty || item.quantity;
+                  return (
+                    <div key={`chk-${item._id}${item.leftoverQty ? '-left' : ''}`} className="flex gap-3">
+                      <img src={item.product.images?.[0]?.url || '/placeholder.png'} alt=""
+                        className="w-14 h-14 rounded object-cover border" />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium line-clamp-1">{item.product.name}</h3>
+                        {item.variant && (
+                          <p className="text-xs text-gray-600">Size: {item.variant.size}</p>
+                        )}
+                        <p className="text-xs text-gray-500">Qty: {showQty} × ₹{getItemPrice(item)}</p>
+                      </div>
+                      <div className="font-semibold text-sm">₹{getItemPrice(item) * showQty}</div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Combo Offers Section */}
@@ -986,15 +1117,15 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                {comboDiscount > 0 && (
-                  <div className="flex justify-between text-purple-600">
-                    <span className="flex items-center gap-1">
-                      <FiLayers className="w-3 h-3" />
-                      Combo Discount
+                {comboDiscounts.length > 0 && comboDiscounts.map((combo) => (
+                  <div key={`chk-disc-${combo._id}`} className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-1 text-sm">
+                      <FiPercent className="w-3 h-3" />
+                      {combo.title}
                     </span>
-                    <span className="font-medium">-₹{comboDiscount}</span>
+                    <span className="font-medium text-sm">-₹{combo.discount}</span>
                   </div>
-                )}
+                ))}
 
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
@@ -1006,7 +1137,7 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                {discount > 0 && comboDiscount > 0 && couponDiscount > 0 && (
+                {discount > 0 && (comboDiscounts.length + (couponDiscount > 0 ? 1 : 0)) > 1 && (
                   <div className="flex justify-between text-green-700 font-medium pt-1 border-t border-green-100">
                     <span>Total Savings</span>
                     <span>-₹{discount}</span>

@@ -80,11 +80,12 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const updateCartItem = async (itemId, quantity, giftWrap) => {
+  const updateCartItem = async (itemId, quantity, giftWrap, variant) => {
     try {
       const { data } = await API.put(`/cart/${itemId}`, {
         quantity,
         giftWrap,
+        variant,
       });
 
       if (data.success) {

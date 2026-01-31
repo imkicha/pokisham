@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiEye, FiDownload, FiMail, FiMessageCircle, FiSend, FiPackage, FiUser, FiCalendar, FiX } from 'react-icons/fi';
+import { FiEye, FiDownload, FiMail, FiMessageCircle, FiSend, FiPackage, FiUser, FiCalendar, FiX, FiCreditCard, FiPercent, FiShoppingBag } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
@@ -272,6 +272,9 @@ const OrdersManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">₹{order.totalPrice}</div>
+                        {order.discountPrice > 0 && (
+                          <div className="text-xs text-green-600">-₹{order.discountPrice} off</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -362,12 +365,17 @@ const OrdersManagement = () => {
                       <FiCalendar className="text-gray-400" />
                       {formatDate(order.createdAt)}
                     </div>
-                    <div className="text-lg font-bold text-gray-900">₹{order.totalPrice}</div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-gray-900">₹{order.totalPrice}</div>
+                      {order.discountPrice > 0 && (
+                        <div className="text-xs text-green-600">-₹{order.discountPrice} discount</div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Payment Status */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Payment:</span>
+                    <span className="text-sm text-gray-600">Payment ({order.paymentMethod || 'N/A'}):</span>
                     <span
                       className={`px-2 py-1 text-xs font-semibold rounded-full ${
                         order.paymentInfo?.status === 'completed'
@@ -419,6 +427,31 @@ const OrdersManagement = () => {
 
               {/* Modal Body */}
               <div className="p-4 md:p-6 space-y-5">
+                {/* Order Overview Badges */}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.orderStatus)}`}>
+                    {selectedOrder.orderStatus}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    selectedOrder.paymentInfo?.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    selectedOrder.paymentInfo?.status === 'failed' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    <FiCreditCard className="w-3 h-3" />
+                    {selectedOrder.paymentMethod} — {selectedOrder.paymentInfo?.status || 'pending'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    <FiCalendar className="w-3 h-3" />
+                    {formatDate(selectedOrder.createdAt)}
+                  </span>
+                  {selectedOrder.discountPrice > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      <FiPercent className="w-3 h-3" />
+                      Saved ₹{selectedOrder.discountPrice}
+                    </span>
+                  )}
+                </div>
+
                 {/* Customer Information */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-base md:text-lg font-semibold mb-2 flex items-center gap-2">
@@ -534,33 +567,80 @@ const OrdersManagement = () => {
 
                 {/* Order Items */}
                 <div>
-                  <h3 className="text-base md:text-lg font-semibold mb-3">Order Items</h3>
-                  <div className="space-y-3">
+                  <h3 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2">
+                    <FiShoppingBag className="text-primary-600" />
+                    Order Items ({selectedOrder.orderItems?.reduce((sum, i) => sum + i.quantity, 0)} items)
+                  </h3>
+                  <div className="border rounded-lg overflow-hidden">
                     {selectedOrder.orderItems?.map((item, index) => (
-                      <div key={index} className="flex justify-between items-start py-3 border-b last:border-0">
-                        <div className="flex-1">
-                          <p className="text-gray-900 font-medium text-sm md:text-base">{item.name}</p>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                              Qty: {item.quantity}
-                            </span>
-                            {item.variant && (
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                Size: {item.variant.size}
+                      <div key={index} className="flex items-center gap-3 p-3 border-b last:border-0 hover:bg-gray-50">
+                        {/* Product Image */}
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-12 h-12 md:w-14 md:h-14 rounded-lg object-cover border flex-shrink-0"
+                          />
+                        )}
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 font-medium text-sm md:text-base truncate">{item.name}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {item.variant?.size && (
+                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">
+                                {item.variant.size}
                               </span>
                             )}
                             {item.giftWrap && (
-                              <span className="text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
+                              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-medium">
                                 Gift Wrap
+                              </span>
+                            )}
+                            {item.customPhoto?.url && (
+                              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-medium">
+                                Custom Photo
                               </span>
                             )}
                           </div>
                         </div>
-                        <p className="text-gray-900 font-semibold ml-4">₹{item.price * item.quantity}</p>
+                        {/* Price Breakdown */}
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-gray-900 font-semibold text-sm md:text-base">₹{item.price * item.quantity}</p>
+                          <p className="text-xs text-gray-500">
+                            {item.quantity > 1 ? `${item.quantity} × ₹${item.price}` : `₹${item.price}`}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* Combo Offers Applied */}
+                {selectedOrder.comboOfferIds?.length > 0 && selectedOrder.comboDiscount > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h3 className="text-sm md:text-base font-semibold text-green-800 flex items-center gap-2 mb-1">
+                      <FiPackage className="w-4 h-4" />
+                      Combo Offer Applied
+                    </h3>
+                    <p className="text-sm text-green-700">
+                      Combo discount: <span className="font-bold">-₹{selectedOrder.comboDiscount}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Coupon Applied */}
+                {selectedOrder.couponCode && selectedOrder.couponDiscount > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="text-sm md:text-base font-semibold text-blue-800 flex items-center gap-2 mb-1">
+                      <FiPercent className="w-4 h-4" />
+                      Coupon Applied
+                    </h3>
+                    <p className="text-sm text-blue-700">
+                      Code: <span className="font-mono font-bold">{selectedOrder.couponCode}</span>
+                      {' '}— Saved <span className="font-bold">₹{selectedOrder.couponDiscount}</span>
+                    </p>
+                  </div>
+                )}
 
                 {/* Update Status */}
                 <div>
@@ -665,45 +745,73 @@ const OrdersManagement = () => {
                   </button>
                 </div>
 
-                {/* Order Summary */}
+                {/* Price Summary */}
                 <div className="pt-4 border-t bg-gray-50 -mx-4 md:-mx-6 px-4 md:px-6 py-4 -mb-4 md:-mb-6 rounded-b-lg">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Price Breakdown</h3>
                   <div className="space-y-2 text-sm md:text-base">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Items Price:</span>
+                      <span className="text-gray-600">Items Total</span>
                       <span>₹{selectedOrder.itemsPrice}</span>
                     </div>
-                    {(selectedOrder.packingPrice > 0 || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0)) > 0) && (
+                    {selectedOrder.packingPrice > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Packing Charges:</span>
-                        <span>₹{selectedOrder.packingPrice || (selectedOrder.totalPrice - selectedOrder.itemsPrice - (selectedOrder.giftWrapPrice || 0) - (selectedOrder.shippingPrice || 0) - (selectedOrder.taxPrice || 0))}</span>
+                        <span className="text-gray-600">Packing Charges</span>
+                        <span>₹{selectedOrder.packingPrice}</span>
                       </div>
                     )}
                     {selectedOrder.giftWrapPrice > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Gift Wrap:</span>
+                        <span className="text-gray-600">Gift Wrap</span>
                         <span>₹{selectedOrder.giftWrapPrice}</span>
                       </div>
                     )}
                     {selectedOrder.shippingPrice > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Delivery Charge:</span>
-                        <span className="text-green-600">₹{selectedOrder.shippingPrice}</span>
+                        <span className="text-gray-600">Delivery Charge</span>
+                        <span>₹{selectedOrder.shippingPrice}</span>
                       </div>
                     )}
                     {selectedOrder.shippingPrice === 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Delivery:</span>
+                        <span className="text-gray-600">Delivery</span>
                         <span className="text-orange-600 font-medium">To Pay</span>
                       </div>
                     )}
                     {selectedOrder.taxPrice > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Tax:</span>
+                        <span className="text-gray-600">Tax</span>
                         <span>₹{selectedOrder.taxPrice}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                      <span>Total Amount:</span>
+                    {selectedOrder.discountPrice > 0 && (
+                      <>
+                        <div className="flex justify-between text-green-600 font-medium">
+                          <span>Discount</span>
+                          <span>-₹{selectedOrder.discountPrice}</span>
+                        </div>
+                        {/* Show combo/coupon breakdown only when both exist */}
+                        {selectedOrder.comboDiscount > 0 && selectedOrder.couponDiscount > 0 && (
+                          <div className="ml-4 space-y-1">
+                            <div className="flex justify-between text-xs text-green-500">
+                              <span>Combo Offer</span>
+                              <span>-₹{selectedOrder.comboDiscount}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-green-500">
+                              <span>Coupon {selectedOrder.couponCode && `(${selectedOrder.couponCode})`}</span>
+                              <span>-₹{selectedOrder.couponDiscount}</span>
+                            </div>
+                          </div>
+                        )}
+                        {/* Show coupon code if only coupon discount */}
+                        {selectedOrder.couponCode && !selectedOrder.comboDiscount && (
+                          <div className="flex justify-between text-xs text-green-500 ml-4">
+                            <span>Coupon: {selectedOrder.couponCode}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div className="flex justify-between text-lg font-bold border-t pt-3 mt-3">
+                      <span>Total Amount</span>
                       <span className="text-primary-600">₹{selectedOrder.totalPrice}</span>
                     </div>
                   </div>
