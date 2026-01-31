@@ -1,11 +1,29 @@
 import { useState, useEffect } from 'react';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { FiEye, FiDownload, FiMail, FiMessageCircle, FiSend, FiPackage, FiUser, FiCalendar, FiX, FiCreditCard, FiPercent, FiShoppingBag } from 'react-icons/fi';
+import { FiEye, FiDownload, FiMail, FiMessageCircle, FiSend, FiPackage, FiUser, FiCalendar, FiX, FiCreditCard, FiPercent, FiShoppingBag, FiImage } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import DashboardBreadcrumb from '../../components/common/DashboardBreadcrumb';
 
 const OrdersManagement = () => {
+  const handleDownloadPhoto = async (url, fileName) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName || 'custom-photo.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      window.open(url, '_blank');
+      toast.error('Download failed, opened in new tab instead');
+    }
+  };
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -573,43 +591,66 @@ const OrdersManagement = () => {
                   </h3>
                   <div className="border rounded-lg overflow-hidden">
                     {selectedOrder.orderItems?.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 border-b last:border-0 hover:bg-gray-50">
-                        {/* Product Image */}
-                        {item.image && (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-12 h-12 md:w-14 md:h-14 rounded-lg object-cover border flex-shrink-0"
-                          />
-                        )}
-                        {/* Product Details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-gray-900 font-medium text-sm md:text-base truncate">{item.name}</p>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {item.variant?.size && (
-                              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">
-                                {item.variant.size}
-                              </span>
-                            )}
-                            {item.giftWrap && (
-                              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-medium">
-                                Gift Wrap
-                              </span>
-                            )}
-                            {item.customPhoto?.url && (
-                              <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-medium">
-                                Custom Photo
-                              </span>
-                            )}
+                      <div key={index} className="border-b last:border-0 hover:bg-gray-50">
+                        <div className="flex items-center gap-3 p-3">
+                          {/* Product Image */}
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-12 h-12 md:w-14 md:h-14 rounded-lg object-cover border flex-shrink-0"
+                            />
+                          )}
+                          {/* Product Details */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-gray-900 font-medium text-sm md:text-base truncate">{item.name}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {item.variant?.size && (
+                                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">
+                                  {item.variant.size}
+                                </span>
+                              )}
+                              {item.giftWrap && (
+                                <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-medium">
+                                  Gift Wrap
+                                </span>
+                              )}
+                              {item.customPhoto?.url && (
+                                <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-medium">
+                                  Custom Photo
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Price Breakdown */}
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-gray-900 font-semibold text-sm md:text-base">₹{item.price * item.quantity}</p>
+                            <p className="text-xs text-gray-500">
+                              {item.quantity > 1 ? `${item.quantity} × ₹${item.price}` : `₹${item.price}`}
+                            </p>
                           </div>
                         </div>
-                        {/* Price Breakdown */}
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-gray-900 font-semibold text-sm md:text-base">₹{item.price * item.quantity}</p>
-                          <p className="text-xs text-gray-500">
-                            {item.quantity > 1 ? `${item.quantity} × ₹${item.price}` : `₹${item.price}`}
-                          </p>
-                        </div>
+                        {/* Custom Photo Preview & Download */}
+                        {item.customPhoto?.url && (
+                          <div className="px-3 pb-3 flex items-center gap-3 ml-[60px] md:ml-[68px]">
+                            <img
+                              src={item.customPhoto.url}
+                              alt="Customer uploaded photo"
+                              className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg border-2 border-orange-200 cursor-pointer"
+                              onClick={() => window.open(item.customPhoto.url, '_blank')}
+                            />
+                            <div className="flex-1">
+                              <p className="text-xs text-gray-500 mb-1">Customer's uploaded photo</p>
+                              <button
+                                onClick={() => handleDownloadPhoto(item.customPhoto.url, `custom-photo-${item.product?.name || 'order'}.jpg`)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 transition-colors"
+                              >
+                                <FiDownload className="w-3 h-3" />
+                                Download Photo
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

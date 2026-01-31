@@ -397,6 +397,59 @@ const CartPage = () => {
                               ₹{getItemPrice(item) * item.comboQty}
                             </p>
                           </div>
+
+                          {/* Custom Photo Upload for combo frame products */}
+                          {item.product.requiresCustomPhoto && (
+                            <div className="mt-2 ml-15 sm:ml-[68px] p-2 bg-blue-50 rounded-lg border border-blue-200">
+                              {item.customPhoto?.url ? (
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={item.customPhoto.url}
+                                    alt="Custom"
+                                    className="w-10 h-10 object-cover rounded border-2 border-blue-300"
+                                  />
+                                  <p className="text-xs text-green-600 font-medium flex-1">Photo uploaded!</p>
+                                  <button
+                                    onClick={() => handleRemoveCustomPhoto(item._id)}
+                                    disabled={uploadingPhoto[item._id]}
+                                    className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                                  >
+                                    <FiX className="w-3 h-3" />
+                                    Remove
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <FiImage className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                  <span className="text-xs text-blue-800 flex-1">Upload your photo</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    ref={(el) => (fileInputRefs.current[`combo-${item._id}`] = el)}
+                                    onChange={(e) => handleCustomPhotoUpload(item._id, e.target.files[0])}
+                                    className="hidden"
+                                  />
+                                  <button
+                                    onClick={() => fileInputRefs.current[`combo-${item._id}`]?.click()}
+                                    disabled={uploadingPhoto[item._id]}
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                  >
+                                    {uploadingPhoto[item._id] ? (
+                                      <>
+                                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Uploading...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FiUpload className="w-3 h-3" />
+                                        Upload
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
