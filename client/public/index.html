@@ -13,7 +13,10 @@
     />
     <meta name="keywords" content="Pokisham, Pokisham gifts, Pokisham online gift store, handcrafted gifts India, customized gifts online, personalized gifts, handmade gifts, custom photo frames, pottery online, Golu Bommai, South Indian gifts, unique gifts India, buy handmade gifts online" />
     <meta name="author" content="Pokisham" />
-    <link rel="canonical" href="https://www.pokisham.com" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    <link rel="canonical" href="https://www.pokisham.com/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -98,13 +101,77 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Pokisham - Handcrafted & Customized Gifts Online | Buy Unique Gifts India</title>
+    <title>Pokisham | Handcrafted & Customized Gifts Online India</title>
+
+    <!-- Organization Schema - Tells Google "Pokisham" is a BRAND -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Pokisham",
+      "alternateName": ["Pokisham Gifts", "Pokisham India", "Pokisham Online"],
+      "url": "https://www.pokisham.com",
+      "logo": "https://www.pokisham.com/logo512.png",
+      "description": "Pokisham is India's trusted online gift store for handcrafted and customized gifts including handmade frames, pottery, Golu Bommai and personalized gifts.",
+      "foundingDate": "2024",
+      "sameAs": [
+        "https://www.facebook.com/pokisham",
+        "https://www.instagram.com/pokisham",
+        "https://twitter.com/pokisham"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Tamil", "Hindi"]
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "IN"
+      }
+    }
+    </script>
+
+    <!-- WebSite Schema with SearchAction - Helps Google understand site structure -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Pokisham",
+      "alternateName": "Pokisham Gifts",
+      "url": "https://www.pokisham.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.pokisham.com/products?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- LocalBusiness Schema - For local SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Store",
+      "name": "Pokisham",
+      "image": "https://www.pokisham.com/logo512.png",
+      "url": "https://www.pokisham.com",
+      "description": "Pokisham - Online store for handcrafted gifts, custom frames, and personalized products in India",
+      "priceRange": "₹₹",
+      "paymentAccepted": ["Cash", "Credit Card", "UPI", "Net Banking"],
+      "currenciesAccepted": "INR"
+    }
+    </script>
 
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <h1>Pokisham - Handcrafted & Customized Gifts Online India</h1>
+      <p>Pokisham is India's trusted online gift store for handcrafted and customized gifts. Shop unique handmade frames, pottery, Golu Bommai and personalized gifts at Pokisham. Free shipping above ₹999.</p>
+      <p>Visit <a href="https://www.pokisham.com">Pokisham</a> to browse our collection of handmade gifts.</p>
+      <p>You need to enable JavaScript to run this app.</p>
+    </noscript>
     <div id="root"></div>
     <!--
       This HTML file is a template.
