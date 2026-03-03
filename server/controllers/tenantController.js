@@ -223,30 +223,41 @@ exports.approveTenant = async (req, res) => {
     // Runs after approval — approval succeeds even if Shiprocket fails.
     // Missing pickup location is caught later in markReadyToShip.
     if (!tenant.shiprocket?.pickupCreated) {
-      // Pre-validate before calling the API
+      // Step 1: Validate required fields exist
       const validation = shiprocket.validatePickupFields(tenant);
       if (!validation.valid) {
         console.warn(
-          `[Shiprocket] Skipping pickup creation for tenant ${tenant._id} (${tenant.businessName}): ` +
-          `missing fields — ${validation.missing.join(', ')}`
+          `[Shiprocket] Pickup skipped for tenant ${tenant._id} (${tenant.businessName}) — ` +
+          `missing fields: ${validation.missing.join(', ')}`
         );
       } else {
-        try {
-          const result = await shiprocket.createPickupLocation(tenant);
-          tenant.shiprocket = {
-            pickupLocation: result.pickup_location,
-            pickupCreated: true,
-            pickupCreatedAt: new Date(),
-          };
-          await tenant.save();
-          console.log(
-            `[Shiprocket] Pickup location created for tenant ${tenant._id} (${tenant.businessName}): ${result.pickup_location}`
+        // Step 2: Verify address can reach 10-char minimum
+        const built = shiprocket.buildShiprocketAddress(tenant);
+        if (!built.valid) {
+          console.warn(
+            `[Shiprocket] Pickup skipped for tenant ${tenant._id} (${tenant.businessName}) — ` +
+            `invalid address data (resolved to "${built.address}", need 10+ chars)`
           );
-        } catch (srError) {
-          // Log but don't fail the approval — admin can retry later
-          console.error(
-            `[Shiprocket] Failed to create pickup for tenant ${tenant._id} (${tenant.businessName}): ${srError.message}`
-          );
+        } else {
+          // Step 3: Call Shiprocket API
+          try {
+            const result = await shiprocket.createPickupLocation(tenant);
+            tenant.shiprocket = {
+              pickupLocation: result.pickup_location,
+              pickupCreated: true,
+              pickupCreatedAt: new Date(),
+            };
+            await tenant.save();
+            console.log(
+              `[Shiprocket] Pickup created for tenant ${tenant._id} (${tenant.businessName}): ` +
+              `${result.pickup_location} | address: "${built.address}"`
+            );
+          } catch (srError) {
+            // Log but don't fail the approval — admin can retry later
+            console.error(
+              `[Shiprocket] Failed to create pickup for tenant ${tenant._id} (${tenant.businessName}): ${srError.message}`
+            );
+          }
         }
       }
     }

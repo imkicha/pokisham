@@ -195,15 +195,18 @@ function resolveStateName(raw) {
 // ─── Pickup Locations ────────────────────────────────────────────────────────
 
 /**
- * Validate that a tenant has all fields required for Shiprocket pickup creation.
+ * Validate that a tenant has the minimum fields required for Shiprocket pickup.
  * Returns { valid: true } or { valid: false, missing: [...] }.
+ *
+ * NOTE: street can be short (e.g. "Madurai") — buildShiprocketAddress()
+ * will auto-extend it by appending city/state. We only require it to exist.
  */
 function validatePickupFields(tenant) {
   const missing = [];
   const addr = tenant.address || {};
 
-  if (!addr.street || addr.street.trim().length < 10) {
-    missing.push('address.street (min 10 characters)');
+  if (!addr.street || !addr.street.trim()) {
+    missing.push('address.street');
   }
   if (!addr.city || !addr.city.trim()) {
     missing.push('address.city');
@@ -211,7 +214,7 @@ function validatePickupFields(tenant) {
   if (!addr.state || !addr.state.trim()) {
     missing.push('address.state');
   } else if (!resolveStateName(addr.state)) {
-    missing.push('address.state (must be a valid Indian state name, not abbreviation)');
+    missing.push('address.state (must be a valid Indian state name, e.g. "Tamil Nadu" not "TN")');
   }
   if (!addr.pincode || !String(addr.pincode).trim()) {
     missing.push('address.pincode');
@@ -221,6 +224,44 @@ function validatePickupFields(tenant) {
   }
 
   return missing.length ? { valid: false, missing } : { valid: true };
+}
+
+/**
+ * Build a sanitized address string for Shiprocket's `address` field.
+ * Shiprocket requires the address to be at least 10 characters.
+ *
+ * Strategy:
+ *  1. If street alone >= 10 chars → use it as-is.
+ *  2. Otherwise, combine: "street, city, state" until >= 10 chars.
+ *  3. Returns { address, valid } — valid is false only when we cannot
+ *     reach 10 chars even after combining all available parts.
+ *
+ * @param {Object} tenant - The Tenant document
+ * @returns {{ address: string, valid: boolean }}
+ */
+function buildShiprocketAddress(tenant) {
+  const addr = tenant.address || {};
+  const street = (addr.street || '').trim();
+  const city = (addr.city || '').trim();
+  const state = resolveStateName(addr.state) || (addr.state || '').trim();
+
+  // Start with street
+  let result = street;
+
+  // If too short, append city
+  if (result.length < 10 && city) {
+    result = result ? `${result}, ${city}` : city;
+  }
+
+  // If still too short, append state
+  if (result.length < 10 && state) {
+    result = result ? `${result}, ${state}` : state;
+  }
+
+  return {
+    address: result,
+    valid: result.length >= 10,
+  };
 }
 
 /**
@@ -239,6 +280,14 @@ async function createPickupLocation(tenant) {
     );
   }
 
+  // Build a sanitized address (auto-extends short streets)
+  const built = buildShiprocketAddress(tenant);
+  if (!built.valid) {
+    throw new Error(
+      `Address too short for Shiprocket (got "${built.address}", need 10+ chars)`
+    );
+  }
+
   // Deterministic pickup name: "tenant_<mongoId>"
   const pickupName = `tenant_${tenant._id}`;
 
@@ -250,7 +299,7 @@ async function createPickupLocation(tenant) {
     name: tenant.ownerName.trim(),
     email: tenant.email.trim(),
     phone: tenant.phone.trim(),
-    address: tenant.address.street.trim(),
+    address: built.address,
     address_2: '',
     city: tenant.address.city.trim(),
     state: fullState,
@@ -417,6 +466,7 @@ module.exports = {
   refreshToken,
   createPickupLocation,
   validatePickupFields,
+  buildShiprocketAddress,
   resolveStateName,
   checkServiceability,
   createShiprocketOrder,
