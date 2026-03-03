@@ -92,6 +92,11 @@ app.use('/api/popup', require('./routes/popupRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/payment-config', require('./routes/paymentConfigRoutes'));
+app.use('/api/shipping', require('./routes/shippingRoutes'));
+
+// Shiprocket webhook — separate route (no auth, no rate limit prefix)
+const { shiprocketWebhook } = require('./controllers/shippingController');
+app.post('/api/shiprocket/webhook', shiprocketWebhook);
 
 // Dynamic Sitemap for SEO (includes product pages)
 app.get('/sitemap.xml', async (req, res) => {

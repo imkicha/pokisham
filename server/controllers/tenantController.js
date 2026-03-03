@@ -2,6 +2,7 @@ const Tenant = require('../models/Tenant');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+const shiprocket = require('../services/shiprocketService');
 
 // @desc    Create tenant application
 // @route   POST /api/tenants/apply
@@ -217,6 +218,25 @@ exports.approveTenant = async (req, res) => {
       role: 'tenant',
       isVerified: true
     });
+
+    // ── Auto-create Shiprocket pickup location for this vendor ───────
+    // Runs in background — approval succeeds even if Shiprocket fails.
+    // Missing pickup location is caught later in markReadyToShip.
+    if (!tenant.shiprocket?.pickupCreated && tenant.address?.pincode) {
+      try {
+        const result = await shiprocket.createPickupLocation(tenant);
+        tenant.shiprocket = {
+          pickupLocation: result.pickup_location,
+          pickupCreated: true,
+          pickupCreatedAt: new Date(),
+        };
+        await tenant.save();
+        console.log(`[Shiprocket] Pickup location created for tenant ${tenant.businessName}: ${result.pickup_location}`);
+      } catch (srError) {
+        // Log but don't fail the approval — admin can retry later
+        console.error(`[Shiprocket] Failed to create pickup for tenant ${tenant._id}:`, srError.message);
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -204,6 +204,25 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0.0,
     },
+    // ─── Shiprocket Shipping Fields ───────────────────────────────────
+    // For single-vendor orders, these are set directly on the order.
+    // For multi-vendor orders, per-vendor details live in the Shipment model;
+    // these fields on the parent order reflect the overall shipping status.
+    shipping: {
+      shiprocketOrderId: { type: String, default: null },
+      shipmentId: { type: String, default: null },
+      awb: { type: String, default: null },
+      courierName: { type: String, default: null },
+      courierCompanyId: { type: Number, default: null },
+      shiprocketStatus: { type: String, default: null },
+      pickupScheduledDate: { type: Date, default: null },
+      deliveryEstimate: { type: String, default: null },
+      trackingUrl: { type: String, default: null },
+      label: { type: String, default: null }, // Shipping label URL
+      readyToShip: { type: Boolean, default: false },
+      readyToShipAt: { type: Date, default: null },
+    },
+
     deliveredAt: Date,
     cancelledAt: Date,
     cancellationReason: String,

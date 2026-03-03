@@ -89,6 +89,14 @@ const tenantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // ─── Shiprocket Pickup Location ────────────────────────────────
+    // Auto-created when the tenant is approved by super admin.
+    shiprocket: {
+      pickupLocation: { type: String, default: null }, // Shiprocket pickup_location name
+      pickupCreated: { type: Boolean, default: false },
+      pickupCreatedAt: { type: Date, default: null },
+    },
   },
   {
     timestamps: true,
