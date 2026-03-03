@@ -25,15 +25,17 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SHIPROCKET WEBHOOK — Registered BEFORE any middleware (CORS, rate limiter,
-// helmet, HPP, etc.) so Shiprocket's servers can reach it without being blocked.
+// TRACKING WEBHOOK — Registered BEFORE any middleware (CORS, rate limiter,
+// helmet, HPP, etc.) so external shipping servers can reach it unblocked.
+// NOTE: Path must NOT contain "shiprocket" / "kartrocket" / "sr" / "kr" —
+// Shiprocket rejects webhook URLs containing those keywords.
 // ══════════════════════════════════════════════════════════════════════════════
 const { shiprocketWebhook } = require('./controllers/shippingController');
-app.post('/api/shiprocket/webhook', express.json(), shiprocketWebhook);
-app.get('/api/shiprocket/webhook', (req, res) => {
+app.post('/api/tracking/webhook', express.json(), shiprocketWebhook);
+app.get('/api/tracking/webhook', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Shiprocket webhook endpoint is active. Use POST to send events.',
+    message: 'Tracking webhook endpoint is active. Use POST to send events.',
   });
 });
 

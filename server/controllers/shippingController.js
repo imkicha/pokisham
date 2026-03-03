@@ -613,7 +613,7 @@ exports.cancelShipment = async (req, res) => {
 
 /**
  * @desc    Receive status updates from Shiprocket via webhook
- * @route   POST /api/shiprocket/webhook
+ * @route   POST /api/tracking/webhook
  * @access  Public (no auth, no CORS, no rate limit)
  *
  * CRITICAL DESIGN DECISIONS:
