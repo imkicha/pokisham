@@ -220,21 +220,34 @@ exports.approveTenant = async (req, res) => {
     });
 
     // ── Auto-create Shiprocket pickup location for this vendor ───────
-    // Runs in background — approval succeeds even if Shiprocket fails.
+    // Runs after approval — approval succeeds even if Shiprocket fails.
     // Missing pickup location is caught later in markReadyToShip.
-    if (!tenant.shiprocket?.pickupCreated && tenant.address?.pincode) {
-      try {
-        const result = await shiprocket.createPickupLocation(tenant);
-        tenant.shiprocket = {
-          pickupLocation: result.pickup_location,
-          pickupCreated: true,
-          pickupCreatedAt: new Date(),
-        };
-        await tenant.save();
-        console.log(`[Shiprocket] Pickup location created for tenant ${tenant.businessName}: ${result.pickup_location}`);
-      } catch (srError) {
-        // Log but don't fail the approval — admin can retry later
-        console.error(`[Shiprocket] Failed to create pickup for tenant ${tenant._id}:`, srError.message);
+    if (!tenant.shiprocket?.pickupCreated) {
+      // Pre-validate before calling the API
+      const validation = shiprocket.validatePickupFields(tenant);
+      if (!validation.valid) {
+        console.warn(
+          `[Shiprocket] Skipping pickup creation for tenant ${tenant._id} (${tenant.businessName}): ` +
+          `missing fields — ${validation.missing.join(', ')}`
+        );
+      } else {
+        try {
+          const result = await shiprocket.createPickupLocation(tenant);
+          tenant.shiprocket = {
+            pickupLocation: result.pickup_location,
+            pickupCreated: true,
+            pickupCreatedAt: new Date(),
+          };
+          await tenant.save();
+          console.log(
+            `[Shiprocket] Pickup location created for tenant ${tenant._id} (${tenant.businessName}): ${result.pickup_location}`
+          );
+        } catch (srError) {
+          // Log but don't fail the approval — admin can retry later
+          console.error(
+            `[Shiprocket] Failed to create pickup for tenant ${tenant._id} (${tenant.businessName}): ${srError.message}`
+          );
+        }
       }
     }
 

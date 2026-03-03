@@ -143,34 +143,132 @@ async function authenticatedRequest(method, path, body) {
   }
 }
 
+// ─── Indian State Helpers ────────────────────────────────────────────────────
+
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
+
+// Map common abbreviations to full state names
+const STATE_ABBREVIATION_MAP = {
+  'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam',
+  'BR': 'Bihar', 'CG': 'Chhattisgarh', 'GA': 'Goa', 'GJ': 'Gujarat',
+  'HR': 'Haryana', 'HP': 'Himachal Pradesh', 'JH': 'Jharkhand',
+  'KA': 'Karnataka', 'KL': 'Kerala', 'MP': 'Madhya Pradesh',
+  'MH': 'Maharashtra', 'MN': 'Manipur', 'ML': 'Meghalaya', 'MZ': 'Mizoram',
+  'NL': 'Nagaland', 'OD': 'Odisha', 'OR': 'Odisha', 'PB': 'Punjab',
+  'RJ': 'Rajasthan', 'SK': 'Sikkim', 'TN': 'Tamil Nadu', 'TS': 'Telangana',
+  'TR': 'Tripura', 'UP': 'Uttar Pradesh', 'UK': 'Uttarakhand',
+  'UA': 'Uttarakhand', 'WB': 'West Bengal', 'AN': 'Andaman and Nicobar Islands',
+  'CH': 'Chandigarh', 'DN': 'Dadra and Nagar Haveli and Daman and Diu',
+  'DD': 'Dadra and Nagar Haveli and Daman and Diu', 'DL': 'Delhi',
+  'JK': 'Jammu and Kashmir', 'LA': 'Ladakh', 'LD': 'Lakshadweep',
+  'PY': 'Puducherry',
+};
+
+/**
+ * Resolve a state value to its full name.
+ * Accepts abbreviations (TN, KA) or full names.
+ * Returns null if unrecognised.
+ */
+function resolveStateName(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+
+  // Check abbreviation map first (case-insensitive)
+  const fromAbbr = STATE_ABBREVIATION_MAP[trimmed.toUpperCase()];
+  if (fromAbbr) return fromAbbr;
+
+  // Check if it's already a valid full name (case-insensitive match)
+  const match = INDIAN_STATES.find(
+    (s) => s.toLowerCase() === trimmed.toLowerCase()
+  );
+  return match || null;
+}
+
 // ─── Pickup Locations ────────────────────────────────────────────────────────
+
+/**
+ * Validate that a tenant has all fields required for Shiprocket pickup creation.
+ * Returns { valid: true } or { valid: false, missing: [...] }.
+ */
+function validatePickupFields(tenant) {
+  const missing = [];
+  const addr = tenant.address || {};
+
+  if (!addr.street || addr.street.trim().length < 10) {
+    missing.push('address.street (min 10 characters)');
+  }
+  if (!addr.city || !addr.city.trim()) {
+    missing.push('address.city');
+  }
+  if (!addr.state || !addr.state.trim()) {
+    missing.push('address.state');
+  } else if (!resolveStateName(addr.state)) {
+    missing.push('address.state (must be a valid Indian state name, not abbreviation)');
+  }
+  if (!addr.pincode || !String(addr.pincode).trim()) {
+    missing.push('address.pincode');
+  }
+  if (!tenant.phone || !tenant.phone.trim()) {
+    missing.push('phone');
+  }
+
+  return missing.length ? { valid: false, missing } : { valid: true };
+}
 
 /**
  * Create a pickup location in Shiprocket for a vendor/tenant.
  *
  * @param {Object} tenant - The Tenant document from MongoDB
- * @returns {Object} Shiprocket API response
+ * @returns {Object} Shiprocket API response with pickup_location name
+ * @throws {Error} If validation fails or Shiprocket API rejects the request
  */
 async function createPickupLocation(tenant) {
-  // Build a unique, URL-safe pickup location name from businessName + tenantId
-  const pickupName = `${tenant.businessName.replace(/[^a-zA-Z0-9 ]/g, '').trim()}_${tenant._id}`
-    .substring(0, 36); // Shiprocket limits pickup_location to 36 chars
+  // Validate required fields
+  const validation = validatePickupFields(tenant);
+  if (!validation.valid) {
+    throw new Error(
+      `Missing required fields for pickup location: ${validation.missing.join(', ')}`
+    );
+  }
+
+  // Deterministic pickup name: "tenant_<mongoId>"
+  const pickupName = `tenant_${tenant._id}`;
+
+  // Resolve state to full name (never send abbreviation)
+  const fullState = resolveStateName(tenant.address.state);
 
   const payload = {
     pickup_location: pickupName,
-    name: tenant.ownerName,
-    email: tenant.email,
-    phone: tenant.phone,
-    address: tenant.address?.street || '',
+    name: tenant.ownerName.trim(),
+    email: tenant.email.trim(),
+    phone: tenant.phone.trim(),
+    address: tenant.address.street.trim(),
     address_2: '',
-    city: tenant.address?.city || '',
-    state: tenant.address?.state || '',
-    country: tenant.address?.country || 'India',
-    pin_code: tenant.address?.pincode || '',
+    city: tenant.address.city.trim(),
+    state: fullState,
+    country: 'India',
+    pin_code: String(tenant.address.pincode).trim(),
   };
 
-  const result = await authenticatedRequest('POST', '/settings/company/addpickup', payload);
-  return { ...result, pickup_location: pickupName };
+  try {
+    const result = await authenticatedRequest('POST', '/settings/company/addpickup', payload);
+    return { ...result, pickup_location: pickupName };
+  } catch (err) {
+    // Shiprocket returns 403 for duplicate or invalid pickup locations
+    if (err.statusCode === 403) {
+      const detail = err.response?.message || err.response?.error || err.message;
+      throw new Error(`Shiprocket rejected pickup location (403): ${detail}`);
+    }
+    throw err;
+  }
 }
 
 // ─── Courier Serviceability ──────────────────────────────────────────────────
@@ -318,6 +416,8 @@ module.exports = {
   getToken,
   refreshToken,
   createPickupLocation,
+  validatePickupFields,
+  resolveStateName,
   checkServiceability,
   createShiprocketOrder,
   assignAWB,
