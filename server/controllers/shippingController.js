@@ -19,29 +19,85 @@ const Shipment = require('../models/Shipment');
 const Tenant = require('../models/Tenant');
 const shiprocket = require('../services/shiprocketService');
 
-// ─── Helper: Map Shiprocket status to our internal vendorStatus ─────────────
-function mapShiprocketStatus(srStatus) {
-  const statusNum = parseInt(srStatus, 10);
-  const map = {
-    1: 'awb_assigned',       // AWB Assigned
-    2: 'pickup_scheduled',   // Pickup Scheduled
-    3: 'picked_up',          // Pickup Queued (treated as picked up)
-    4: 'cancelled',          // Cancelled
-    5: 'in_transit',         // Shipped / In Transit
-    6: 'delivered',          // Delivered
-    7: 'rto',               // RTO Initiated
-    8: 'rto',               // RTO Delivered
-    9: 'out_for_delivery',  // Out For Delivery
-    17: 'picked_up',        // Picked Up
-    18: 'in_transit',       // In Transit
-    19: 'out_for_delivery', // Out For Delivery
-    20: 'in_transit',       // In Transit (Reached at Destination Hub)
-    38: 'in_transit',       // In Transit (Reached Warehouse)
-  };
-  return map[statusNum] || null;
+// ─── Helper: Map Shiprocket status_id → our internal vendorStatus ───────────
+// Reference: https://apidocs.shiprocket.in/#702f7ee3-3528-4a1d-b5be-b9b4a8b3b8e2
+//
+// Shiprocket status IDs are NOT always consistent. The same logical state
+// (e.g. "Delivered") may arrive as different IDs depending on courier.
+// We map by ID first, then fall back to current_status text matching.
+const SHIPROCKET_STATUS_MAP = {
+  1:  'awb_assigned',       // AWB Assigned
+  2:  'pickup_scheduled',   // Pickup Scheduled / Pickup Generated
+  3:  'picked_up',          // Pickup Queued
+  4:  'cancelled',          // Cancelled
+  5:  'in_transit',         // Shipped
+  6:  'delivered',          // Delivered
+  7:  'rto',               // RTO Initiated (not "Delivered" — see note below)
+  8:  'rto',               // RTO Delivered
+  9:  'out_for_delivery',  // Out For Delivery
+  10: 'in_transit',         // In Transit (alternative)
+  12: 'cancelled',          // Lost
+  14: 'rto',               // RTO Acknowledged
+  15: 'rto',               // RTO In Transit
+  16: 'rto',               // RTO Out For Delivery
+  17: 'picked_up',          // Picked Up
+  18: 'in_transit',         // In Transit
+  19: 'out_for_delivery',  // Out For Delivery
+  20: 'in_transit',         // Reached at Destination Hub
+  21: 'in_transit',         // Misrouted
+  38: 'in_transit',         // Reached Warehouse
+  39: 'in_transit',         // In Flight
+  40: 'pickup_scheduled',   // Pickup Rescheduled
+  41: 'cancelled',          // Pickup Error
+  42: 'rto',               // RTO NDR
+  43: 'out_for_delivery',  // Out for Delivery — NDR attempt
+};
+
+// Fallback: map current_status text → vendorStatus (case-insensitive)
+const SHIPROCKET_TEXT_MAP = {
+  'delivered':          'delivered',
+  'in transit':         'in_transit',
+  'shipped':            'in_transit',
+  'out for delivery':   'out_for_delivery',
+  'picked up':          'picked_up',
+  'pickup scheduled':   'pickup_scheduled',
+  'pickup generated':   'pickup_scheduled',
+  'cancelled':          'cancelled',
+  'rto initiated':      'rto',
+  'rto delivered':      'rto',
+  'rto in transit':     'rto',
+  'awb assigned':       'awb_assigned',
+};
+
+function mapShiprocketStatus(statusId, statusText) {
+  const num = parseInt(statusId, 10);
+  const idResult = (!isNaN(num) && SHIPROCKET_STATUS_MAP[num]) ? SHIPROCKET_STATUS_MAP[num] : null;
+
+  // Text-based mapping (more reliable — Shiprocket's IDs can be inconsistent)
+  let textResult = null;
+  if (statusText) {
+    const key = statusText.toLowerCase().trim();
+    textResult = SHIPROCKET_TEXT_MAP[key] || null;
+    if (!textResult) {
+      // Partial match (e.g., "RTO In Transit" contains "rto in transit")
+      for (const [pattern, status] of Object.entries(SHIPROCKET_TEXT_MAP)) {
+        if (key.includes(pattern)) { textResult = status; break; }
+      }
+    }
+  }
+
+  // If both exist but DISAGREE, trust the text — Shiprocket's status IDs are
+  // known to be inconsistent across couriers (e.g., ID 7 can mean "Delivered"
+  // for some couriers but "RTO Initiated" per official docs).
+  if (textResult && idResult && textResult !== idResult) {
+    console.log(`[Shiprocket Webhook] Status conflict — ID ${num} -> "${idResult}", Text "${statusText}" -> "${textResult}". Using text.`);
+    return textResult;
+  }
+
+  return textResult || idResult || null;
 }
 
-// Map our vendorStatus to the Order model's orderStatus
+// Map our vendorStatus → the Order model's orderStatus enum
 function mapToOrderStatus(vendorStatus) {
   const map = {
     pickup_scheduled: 'Shipped',
@@ -53,6 +109,13 @@ function mapToOrderStatus(vendorStatus) {
   };
   return map[vendorStatus] || null;
 }
+
+// Ordered list for preventing backward status transitions
+const STATUS_ORDER = [
+  'pending', 'accepted', 'packing', 'ready_to_ship', 'shipment_created',
+  'awb_assigned', 'pickup_scheduled', 'picked_up', 'in_transit',
+  'out_for_delivery', 'delivered',
+];
 
 // ─── 1. Mark Ready to Ship ──────────────────────────────────────────────────
 
@@ -553,140 +616,197 @@ exports.cancelShipment = async (req, res) => {
  * @route   POST /api/shiprocket/webhook
  * @access  Public (no auth, no CORS, no rate limit)
  *
- * CRITICAL: This route is registered in server.js BEFORE all middleware
- * (CORS, helmet, rate limiter, etc.) so Shiprocket's servers can reach it.
+ * CRITICAL DESIGN DECISIONS:
+ * 1. Route registered in server.js BEFORE all middleware (CORS, helmet,
+ *    rate limiter) so Shiprocket's servers are never blocked.
+ * 2. ALWAYS returns 200 synchronously — Shiprocket retries on non-200
+ *    and eventually disables the webhook.
+ * 3. All DB work runs in a fire-and-forget async function after the
+ *    response is sent.
+ * 4. Empty/test payloads (Shiprocket validation pings) return 200 too.
+ * 5. Idempotency: duplicate status_id for the same AWB is skipped.
+ * 6. Optional x-api-key header validation when SHIPROCKET_WEBHOOK_SECRET
+ *    is set in .env.
  *
- * Shiprocket sends a POST when shipment status changes. During webhook
- * setup, Shiprocket sends a validation ping (empty or test body) — we
- * must return 200 for that too.
- *
- * Webhook payload format (real event):
+ * Real Shiprocket payload example:
  * {
- *   "awb": "123456789",
+ *   "awb": 59629792084,           // NOTE: can be number or string
  *   "current_status": "Delivered",
  *   "current_status_id": 7,
- *   "shipment_id": "...",
- *   "order_id": "...",
- *   "etd": "2024-01-15 18:00",
+ *   "shipment_status": "Delivered",
+ *   "shipment_status_id": 7,
+ *   "order_id": "13905312",
+ *   "current_timestamp": "2021-07-02 16:41:59",
+ *   "etd": "2021-07-02 16:41:59",
+ *   "courier_name": "Delhivery",
+ *   "channel_order_id": "PK260301..._<tenantId>",
  *   "scans": [...]
  * }
  */
 exports.shiprocketWebhook = (req, res) => {
-  // ALWAYS return 200 immediately — Shiprocket expects a fast response.
-  // If we delay or return non-200, Shiprocket marks the webhook as failed.
+  // ── 1. ALWAYS return 200 immediately ────────────────────────────────────
   res.status(200).json({ success: true });
 
-  // Log every hit for debugging (remove in production once stable)
-  console.log('[Shiprocket Webhook] Hit received:', {
-    method: req.method,
-    contentType: req.headers['content-type'],
-    bodyKeys: req.body ? Object.keys(req.body) : 'no body',
+  // ── 2. Optional webhook secret validation ───────────────────────────────
+  const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
+  if (secret) {
+    const headerKey = req.headers['x-api-key'] || req.headers['x-webhook-secret'];
+    if (headerKey !== secret) {
+      console.warn('[Shiprocket Webhook] Invalid secret from IP:', req.ip);
+      return; // silently drop — already sent 200
+    }
+  }
+
+  // ── 3. Debug log (safe to keep in production — it's one line per event) ─
+  console.log('[Shiprocket Webhook] POST received:', {
     ip: req.ip,
+    contentType: req.headers['content-type'],
+    awb: req.body?.awb || 'none',
+    status: req.body?.current_status || 'none',
+    statusId: req.body?.current_status_id ?? 'none',
   });
 
-  // Process the event asynchronously (after response is sent)
+  // ── 4. Fire-and-forget async processing ─────────────────────────────────
   processWebhookEvent(req.body).catch((err) => {
-    console.error('[Shiprocket Webhook] Background processing error:', err);
+    console.error('[Shiprocket Webhook] Processing error:', err.message || err);
   });
 };
 
 /**
- * Async background processor for webhook events.
- * Separated from the handler so the 200 response is never delayed.
+ * Background processor — runs after 200 is already sent to Shiprocket.
+ * Wrapped in try/catch so no unhandled promise rejections can leak.
  */
 async function processWebhookEvent(payload) {
-  // Handle empty body (Shiprocket validation ping)
+  // ── Handle empty/test payload (Shiprocket validation ping) ────────────
   if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
-    console.log('[Shiprocket Webhook] Empty/test payload — validation ping accepted');
+    console.log('[Shiprocket Webhook] Validation ping — empty payload accepted');
     return;
   }
 
-  const awb = payload.awb;
+  // ── Extract fields from Shiprocket payload ────────────────────────────
+  // AWB can arrive as number (59629792084) or string — normalize to string
+  const awb = payload.awb != null ? String(payload.awb) : null;
+  const currentStatus = payload.current_status || payload.shipment_status || null;
+  const statusId = payload.current_status_id ?? payload.shipment_status_id ?? null;
+  const courierName = payload.courier_name || null;
+  const etd = payload.etd || null;
+  const srTimestamp = payload.current_timestamp || null;
+
   if (!awb) {
-    console.warn('[Shiprocket Webhook] Payload without AWB:', JSON.stringify(payload).slice(0, 300));
+    console.warn('[Shiprocket Webhook] No AWB in payload:', JSON.stringify(payload).slice(0, 300));
     return;
   }
 
-  console.log(`[Shiprocket Webhook] AWB: ${awb}, Status: ${payload.current_status} (ID: ${payload.current_status_id})`);
+  console.log(`[Shiprocket Webhook] Processing — AWB: ${awb}, Status: "${currentStatus}" (ID: ${statusId}), Courier: ${courierName}`);
 
-  // Find our shipment by AWB
-  const shipment = await Shipment.findOne({ awb: String(awb) });
+  // ── Find Shipment by AWB ──────────────────────────────────────────────
+  const shipment = await Shipment.findOne({ awb });
   if (!shipment) {
-    console.warn(`[Shiprocket Webhook] No shipment found for AWB: ${awb}`);
+    console.warn(`[Shiprocket Webhook] No shipment found for AWB: ${awb} — ignoring`);
     return;
   }
 
-  // Map Shiprocket status to our internal status
-  const newStatus = mapShiprocketStatus(payload.current_status_id);
+  // ── Map Shiprocket status to our internal vendorStatus ────────────────
+  const newStatus = mapShiprocketStatus(statusId, currentStatus);
   if (!newStatus) {
-    console.log(`[Shiprocket Webhook] Unmapped status ID: ${payload.current_status_id} for AWB: ${awb}`);
+    console.warn(`[Shiprocket Webhook] Unmapped — statusId: ${statusId}, text: "${currentStatus}" for AWB: ${awb}`);
     return;
   }
 
-  // Don't go backwards in status (e.g., from delivered back to in_transit)
-  const statusOrder = [
-    'pending', 'accepted', 'packing', 'ready_to_ship', 'shipment_created',
-    'awb_assigned', 'pickup_scheduled', 'picked_up', 'in_transit',
-    'out_for_delivery', 'delivered',
-  ];
-  const currentIdx = statusOrder.indexOf(shipment.vendorStatus);
-  const newIdx = statusOrder.indexOf(newStatus);
-
-  if (newIdx <= currentIdx && !['cancelled', 'rto'].includes(newStatus)) {
-    console.log(`[Shiprocket Webhook] Skipping backward status: ${shipment.vendorStatus} -> ${newStatus}`);
+  // ── Idempotency: skip if we already processed this exact status_id ────
+  const numericStatusId = parseInt(statusId, 10);
+  if (!isNaN(numericStatusId) && shipment.lastWebhookStatusId === numericStatusId) {
+    console.log(`[Shiprocket Webhook] Duplicate statusId ${numericStatusId} for AWB ${awb} — skipping`);
     return;
   }
 
-  // Update shipment
+  // ── Prevent backward status transitions ───────────────────────────────
+  // Exception: cancelled/rto can override any status
+  const currentIdx = STATUS_ORDER.indexOf(shipment.vendorStatus);
+  const newIdx = STATUS_ORDER.indexOf(newStatus);
+
+  if (newIdx >= 0 && currentIdx >= 0 && newIdx <= currentIdx && !['cancelled', 'rto'].includes(newStatus)) {
+    console.log(`[Shiprocket Webhook] Backward skip: ${shipment.vendorStatus} -> ${newStatus} for AWB ${awb}`);
+    return;
+  }
+
+  // ── Update Shipment document ──────────────────────────────────────────
   shipment.vendorStatus = newStatus;
-  shipment.shiprocketStatus = payload.current_status;
-  shipment.deliveryEstimate = payload.etd || shipment.deliveryEstimate;
+  shipment.shiprocketStatus = currentStatus;
+  shipment.lastWebhookStatusId = isNaN(numericStatusId) ? null : numericStatusId;
+  shipment.lastWebhookAt = new Date();
 
-  if (newStatus === 'picked_up') {
-    shipment.pickedUpAt = new Date();
-  } else if (newStatus === 'delivered') {
-    shipment.deliveredAt = new Date();
+  if (courierName) shipment.courierName = courierName;
+  if (etd) shipment.deliveryEstimate = etd;
+
+  // Set timestamps for key milestones
+  switch (newStatus) {
+    case 'picked_up':
+      shipment.pickedUpAt = shipment.pickedUpAt || new Date();
+      break;
+    case 'delivered':
+      shipment.deliveredAt = shipment.deliveredAt || new Date();
+      break;
+    case 'cancelled':
+    case 'rto':
+      shipment.cancelledAt = shipment.cancelledAt || new Date();
+      break;
   }
 
   shipment.statusHistory.push({
     status: newStatus,
-    message: `${payload.current_status} (via Shiprocket webhook)`,
+    timestamp: srTimestamp ? new Date(srTimestamp) : new Date(),
+    message: `${currentStatus} (Shiprocket status_id: ${statusId})`,
     source: 'webhook',
   });
 
   await shipment.save();
 
-  // Update the parent Order status
+  // ── Update parent Order ───────────────────────────────────────────────
   const order = await Order.findById(shipment.order);
-  if (order) {
-    const orderStatus = mapToOrderStatus(newStatus);
-    if (orderStatus) {
-      order.orderStatus = orderStatus;
-      order.shipping.shiprocketStatus = newStatus;
-
-      if (newStatus === 'delivered') {
-        order.deliveredAt = new Date();
-
-        // Calculate commission on delivery (if assigned to a tenant)
-        if (order.tenantId) {
-          const tenant = await Tenant.findById(order.tenantId);
-          if (tenant) {
-            order.platformCommission = (order.totalPrice * tenant.commissionRate) / 100;
-            order.tenantEarnings = order.totalPrice - order.platformCommission;
-          }
-        }
-      }
-
-      order.statusHistory.push({
-        status: orderStatus,
-        message: `${payload.current_status} — AWB: ${awb}`,
-      });
-
-      await order.save();
-    }
+  if (!order) {
+    console.warn(`[Shiprocket Webhook] Parent order ${shipment.order} not found for shipment ${shipment._id}`);
+    return;
   }
 
-  console.log(`[Shiprocket Webhook] Updated shipment ${shipment._id} -> ${newStatus}`);
+  const orderStatus = mapToOrderStatus(newStatus);
+  if (!orderStatus) return; // no mapping = no order-level change needed
+
+  // Update order-level shipping fields
+  order.shipping.shiprocketStatus = newStatus;
+  if (courierName) order.shipping.courierName = courierName;
+  if (etd) order.shipping.deliveryEstimate = etd;
+
+  // Only advance order status forward (don't overwrite "Delivered" with "Shipped")
+  const orderStatusPriority = ['Pending', 'Accepted', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+  const currentOrderIdx = orderStatusPriority.indexOf(order.orderStatus);
+  const newOrderIdx = orderStatusPriority.indexOf(orderStatus);
+
+  if (newOrderIdx > currentOrderIdx || ['Cancelled'].includes(orderStatus)) {
+    order.orderStatus = orderStatus;
+
+    if (newStatus === 'delivered') {
+      order.deliveredAt = order.deliveredAt || new Date();
+
+      // Calculate commission on delivery
+      if (order.tenantId) {
+        const tenant = await Tenant.findById(order.tenantId);
+        if (tenant) {
+          order.platformCommission = Math.round((order.totalPrice * tenant.commissionRate) / 100 * 100) / 100;
+          order.tenantEarnings = Math.round((order.totalPrice - order.platformCommission) * 100) / 100;
+        }
+      }
+    }
+
+    order.statusHistory.push({
+      status: orderStatus,
+      message: `${currentStatus} — AWB: ${awb}${courierName ? `, Courier: ${courierName}` : ''}`,
+    });
+  }
+
+  await order.save();
+
+  console.log(`[Shiprocket Webhook] Done — AWB: ${awb}, Shipment: ${shipment.vendorStatus}, Order: ${order.orderStatus}`);
 }
 
 // ─── 7. Get Vendor Shipments ────────────────────────────────────────────────

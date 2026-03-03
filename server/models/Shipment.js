@@ -91,6 +91,10 @@ const shipmentSchema = new mongoose.Schema(
     deliveredAt: { type: Date, default: null },
     cancelledAt: { type: Date, default: null },
 
+    // Idempotency — prevent duplicate webhook processing
+    lastWebhookStatusId: { type: Number, default: null },
+    lastWebhookAt: { type: Date, default: null },
+
     // Status history for audit trail
     statusHistory: [
       {
