@@ -551,12 +551,16 @@ exports.cancelShipment = async (req, res) => {
 /**
  * @desc    Receive status updates from Shiprocket via webhook
  * @route   POST /api/shiprocket/webhook
- * @access  Public (validated by Shiprocket)
+ * @access  Public (no auth, no CORS, no rate limit)
  *
- * Shiprocket sends POST requests when shipment status changes.
- * We match the AWB to our Shipment and update accordingly.
+ * CRITICAL: This route is registered in server.js BEFORE all middleware
+ * (CORS, helmet, rate limiter, etc.) so Shiprocket's servers can reach it.
  *
- * Webhook payload format:
+ * Shiprocket sends a POST when shipment status changes. During webhook
+ * setup, Shiprocket sends a validation ping (empty or test body) — we
+ * must return 200 for that too.
+ *
+ * Webhook payload format (real event):
  * {
  *   "awb": "123456789",
  *   "current_status": "Delivered",
@@ -567,106 +571,123 @@ exports.cancelShipment = async (req, res) => {
  *   "scans": [...]
  * }
  */
-exports.shiprocketWebhook = async (req, res) => {
-  try {
-    const payload = req.body;
+exports.shiprocketWebhook = (req, res) => {
+  // ALWAYS return 200 immediately — Shiprocket expects a fast response.
+  // If we delay or return non-200, Shiprocket marks the webhook as failed.
+  res.status(200).json({ success: true });
 
-    // Shiprocket expects a 200 response quickly — process async
-    res.status(200).json({ success: true });
+  // Log every hit for debugging (remove in production once stable)
+  console.log('[Shiprocket Webhook] Hit received:', {
+    method: req.method,
+    contentType: req.headers['content-type'],
+    bodyKeys: req.body ? Object.keys(req.body) : 'no body',
+    ip: req.ip,
+  });
 
-    // Validate webhook has required fields
-    const awb = payload.awb;
-    if (!awb) {
-      console.warn('Shiprocket webhook received without AWB:', JSON.stringify(payload).slice(0, 200));
-      return;
-    }
+  // Process the event asynchronously (after response is sent)
+  processWebhookEvent(req.body).catch((err) => {
+    console.error('[Shiprocket Webhook] Background processing error:', err);
+  });
+};
 
-    console.log(`[Shiprocket Webhook] AWB: ${awb}, Status: ${payload.current_status} (${payload.current_status_id})`);
+/**
+ * Async background processor for webhook events.
+ * Separated from the handler so the 200 response is never delayed.
+ */
+async function processWebhookEvent(payload) {
+  // Handle empty body (Shiprocket validation ping)
+  if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
+    console.log('[Shiprocket Webhook] Empty/test payload — validation ping accepted');
+    return;
+  }
 
-    // Find our shipment by AWB
-    const shipment = await Shipment.findOne({ awb: String(awb) });
-    if (!shipment) {
-      console.warn(`[Shiprocket Webhook] No shipment found for AWB: ${awb}`);
-      return;
-    }
+  const awb = payload.awb;
+  if (!awb) {
+    console.warn('[Shiprocket Webhook] Payload without AWB:', JSON.stringify(payload).slice(0, 300));
+    return;
+  }
 
-    // Map Shiprocket status to our internal status
-    const newStatus = mapShiprocketStatus(payload.current_status_id);
-    if (!newStatus) {
-      console.log(`[Shiprocket Webhook] Unmapped status ID: ${payload.current_status_id} for AWB: ${awb}`);
-      return;
-    }
+  console.log(`[Shiprocket Webhook] AWB: ${awb}, Status: ${payload.current_status} (ID: ${payload.current_status_id})`);
 
-    // Don't go backwards in status (e.g., from delivered back to in_transit)
-    const statusOrder = [
-      'pending', 'accepted', 'packing', 'ready_to_ship', 'shipment_created',
-      'awb_assigned', 'pickup_scheduled', 'picked_up', 'in_transit',
-      'out_for_delivery', 'delivered',
-    ];
-    const currentIdx = statusOrder.indexOf(shipment.vendorStatus);
-    const newIdx = statusOrder.indexOf(newStatus);
+  // Find our shipment by AWB
+  const shipment = await Shipment.findOne({ awb: String(awb) });
+  if (!shipment) {
+    console.warn(`[Shiprocket Webhook] No shipment found for AWB: ${awb}`);
+    return;
+  }
 
-    // Allow backwards only for cancellation/RTO
-    if (newIdx <= currentIdx && !['cancelled', 'rto'].includes(newStatus)) {
-      console.log(`[Shiprocket Webhook] Skipping backward status: ${shipment.vendorStatus} → ${newStatus}`);
-      return;
-    }
+  // Map Shiprocket status to our internal status
+  const newStatus = mapShiprocketStatus(payload.current_status_id);
+  if (!newStatus) {
+    console.log(`[Shiprocket Webhook] Unmapped status ID: ${payload.current_status_id} for AWB: ${awb}`);
+    return;
+  }
 
-    // Update shipment
-    shipment.vendorStatus = newStatus;
-    shipment.shiprocketStatus = payload.current_status;
-    shipment.deliveryEstimate = payload.etd || shipment.deliveryEstimate;
+  // Don't go backwards in status (e.g., from delivered back to in_transit)
+  const statusOrder = [
+    'pending', 'accepted', 'packing', 'ready_to_ship', 'shipment_created',
+    'awb_assigned', 'pickup_scheduled', 'picked_up', 'in_transit',
+    'out_for_delivery', 'delivered',
+  ];
+  const currentIdx = statusOrder.indexOf(shipment.vendorStatus);
+  const newIdx = statusOrder.indexOf(newStatus);
 
-    if (newStatus === 'picked_up') {
-      shipment.pickedUpAt = new Date();
-    } else if (newStatus === 'delivered') {
-      shipment.deliveredAt = new Date();
-    }
+  if (newIdx <= currentIdx && !['cancelled', 'rto'].includes(newStatus)) {
+    console.log(`[Shiprocket Webhook] Skipping backward status: ${shipment.vendorStatus} -> ${newStatus}`);
+    return;
+  }
 
-    shipment.statusHistory.push({
-      status: newStatus,
-      message: `${payload.current_status} (via Shiprocket webhook)`,
-      source: 'webhook',
-    });
+  // Update shipment
+  shipment.vendorStatus = newStatus;
+  shipment.shiprocketStatus = payload.current_status;
+  shipment.deliveryEstimate = payload.etd || shipment.deliveryEstimate;
 
-    await shipment.save();
+  if (newStatus === 'picked_up') {
+    shipment.pickedUpAt = new Date();
+  } else if (newStatus === 'delivered') {
+    shipment.deliveredAt = new Date();
+  }
 
-    // Update the parent Order status
-    const order = await Order.findById(shipment.order);
-    if (order) {
-      const orderStatus = mapToOrderStatus(newStatus);
-      if (orderStatus) {
-        order.orderStatus = orderStatus;
-        order.shipping.shiprocketStatus = newStatus;
+  shipment.statusHistory.push({
+    status: newStatus,
+    message: `${payload.current_status} (via Shiprocket webhook)`,
+    source: 'webhook',
+  });
 
-        if (newStatus === 'delivered') {
-          order.deliveredAt = new Date();
+  await shipment.save();
 
-          // Calculate commission on delivery (if assigned to a tenant)
-          if (order.tenantId) {
-            const tenant = await Tenant.findById(order.tenantId);
-            if (tenant) {
-              order.platformCommission = (order.totalPrice * tenant.commissionRate) / 100;
-              order.tenantEarnings = order.totalPrice - order.platformCommission;
-            }
+  // Update the parent Order status
+  const order = await Order.findById(shipment.order);
+  if (order) {
+    const orderStatus = mapToOrderStatus(newStatus);
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+      order.shipping.shiprocketStatus = newStatus;
+
+      if (newStatus === 'delivered') {
+        order.deliveredAt = new Date();
+
+        // Calculate commission on delivery (if assigned to a tenant)
+        if (order.tenantId) {
+          const tenant = await Tenant.findById(order.tenantId);
+          if (tenant) {
+            order.platformCommission = (order.totalPrice * tenant.commissionRate) / 100;
+            order.tenantEarnings = order.totalPrice - order.platformCommission;
           }
         }
-
-        order.statusHistory.push({
-          status: orderStatus,
-          message: `${payload.current_status} — AWB: ${awb}`,
-        });
-
-        await order.save();
       }
-    }
 
-    console.log(`[Shiprocket Webhook] Updated shipment ${shipment._id} → ${newStatus}`);
-  } catch (error) {
-    // We already sent 200 to Shiprocket — log the error for debugging
-    console.error('[Shiprocket Webhook] Processing error:', error);
+      order.statusHistory.push({
+        status: orderStatus,
+        message: `${payload.current_status} — AWB: ${awb}`,
+      });
+
+      await order.save();
+    }
   }
-};
+
+  console.log(`[Shiprocket Webhook] Updated shipment ${shipment._id} -> ${newStatus}`);
+}
 
 // ─── 7. Get Vendor Shipments ────────────────────────────────────────────────
 

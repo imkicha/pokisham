@@ -24,6 +24,19 @@ const app = express();
 // Trust proxy - important for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
+// ══════════════════════════════════════════════════════════════════════════════
+// SHIPROCKET WEBHOOK — Registered BEFORE any middleware (CORS, rate limiter,
+// helmet, HPP, etc.) so Shiprocket's servers can reach it without being blocked.
+// ══════════════════════════════════════════════════════════════════════════════
+const { shiprocketWebhook } = require('./controllers/shippingController');
+app.post('/api/shiprocket/webhook', express.json(), shiprocketWebhook);
+app.get('/api/shiprocket/webhook', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Shiprocket webhook endpoint is active. Use POST to send events.',
+  });
+});
+
 // CORS with security - MUST be first before other middleware
 const allowedOrigins = [
   "http://localhost:3000",
@@ -73,7 +86,6 @@ app.use(logSuspiciousActivity);
 // Apply general rate limiting to all routes
 app.use('/api/', apiLimiter);
 
-
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
@@ -93,10 +105,6 @@ app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/payment-config', require('./routes/paymentConfigRoutes'));
 app.use('/api/shipping', require('./routes/shippingRoutes'));
-
-// Shiprocket webhook — separate route (no auth, no rate limit prefix)
-const { shiprocketWebhook } = require('./controllers/shippingController');
-app.post('/api/shiprocket/webhook', shiprocketWebhook);
 
 // Dynamic Sitemap for SEO (includes product pages)
 app.get('/sitemap.xml', async (req, res) => {
